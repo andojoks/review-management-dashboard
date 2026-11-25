@@ -1,0 +1,126 @@
+.review-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--gap);
+    margin-bottom: var(--gap)
+}
+
+.review-stat {
+    padding: 17px
+}
+
+.review-stat strong {
+    display: block;
+    font-size: 26px;
+    letter-spacing: -.06em;
+    margin-top: 8px
+}
+
+.review-stat small {
+    color: var(--muted);
+    font-size: 10px
+}
+
+.filterbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 18px
+}
+
+.filterbar .search-field {
+    height: 35px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    border-radius: 9px;
+    flex: 1;
+    min-width: 190px
+}
+
+.search-field input {
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--ink);
+    width: 100%;
+    font-size: 12px
+}
+
+.select {
+    height: 35px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    border-radius: 9px;
+    color: var(--muted);
+    font-size: 11px
+}
+
+.reviews-table {
+    overflow: hidden
+}
+
+.reviews-table__head,
+.reviews-table__row {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr .6fr .55fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line);
+    font-size: 12px
+}
+
+.reviews-table__head {
+    background: var(--well);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    font-size: 10px
+}
+
+.reviews-table__row:last-child {
+    border-bottom: 0
+}
+
+.reviews-table__row:hover {
+    background: var(--well)
+}
+
+.reviews-table__row small {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+    margin-top: 3px
+}
+
+.reviews-table__rating {
+    font-weight: 700
+}
+
+.reviews-table__actions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end
+}
+
+.reviews-table__actions .ibtn {
+    width: 29px;
+    height: 29px
+}
+
+.mini-trend {
+    height: 36px;
+    width: 100%;
+}
+
+.mini-trend path {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 2
+}

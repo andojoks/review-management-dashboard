@@ -1,0 +1,27 @@
+import { BarChart, Donut, ReputationChart, Sparkline } from '../ui/charts';
+import { Icon } from '../ui/icons';
+import { Avatar, Button, Card, CardHeader, MetricTile, PageHeader, Stars } from '../ui/kit';
+import { metricTiles, pros, reviews } from '../store';
+import { go } from '../router';
+
+export function Overview({ onToast }: { onToast: (message: string) => void }) {
+  return <div className="page ov">
+    <PageHeader title="Good morning, Odile" description="16 reviews are waiting for a reply and 3 are held for a check. Ratings are up for the fourth month running." actions={<><Button icon="send" onClick={() => onToast('Review request composer opened')}>Ask for a review</Button><Button variant="primary" icon="reply" onClick={() => go('inbox')}>Reply queue <span className="badge badge--inv">16</span></Button></>} />
+    <div className="ov__top">
+      <Card className="hero" aria-label="Reputation score">
+        <div className="hero__head"><span className="hero__label">Reputation score · November</span><div className="hero__score"><span className="hero__fig">4.44</span><span className="hero__of">/ 5</span></div><div className="hero__stars"><Stars value={4.4} size={18} /><span className="hero__delta">↑ 2.3%</span><span className="hero__versus">vs October</span></div></div>
+        <div className="hero__metrics"><div className="hero__metric"><strong>164</strong><span>Reviews this month</span></div><div className="hero__metric"><strong>78%</strong><span>Answered</span></div><div className="hero__metric"><strong>2h 54m</strong><span>Median reply</span></div></div>
+        <div className="hero__chart"><ReputationChart /></div>
+      </Card>
+      <Card className="star-card"><div className="star-card__head"><h2>Star mix</h2><p>93 public reviews</p></div><div className="star-bars">{[[5,71],[4,13],[3,8],[2,6],[1,2]].map(([star, value]) => <div className="star-row" key={star}><span>{star} ★</span><span className="star-row__track"><i className="star-row__fill" style={{ width: `${value}%` }} /></span><span className="star-row__pct">{value}%</span></div>)}</div><div className="star-card__foot"><Icon name="heart" size={17} /><span><strong>84%</strong> of clients would book again — four or five stars.</span></div></Card>
+    </div>
+    <div className="kpi-grid">{metricTiles.map(tile => <MetricTile key={tile.label} {...tile} />)}</div>
+    <div className="section-grid">
+      <Card className="activity-card"><CardHeader title="New reviews · last 14 days" subtitle="Oct 27 – today · pick a tile above to switch" /><div className="card__body"><BarChart /><div className="activity-labels"><span>27</span><span>28</span><span>29</span><span>30</span><span>31</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span></div></div></Card>
+      <Card className="queue-card"><CardHeader title="Needs a reply" subtitle="Oldest first answers keep the 24-hour promise" action={<a className="pill" href="#/inbox">All 16 <Icon name="arrow" size={12} /></a>} /><div className="queue-list">{reviews.slice(0, 5).map(review => <a className="queue-item queue-item--link" href={`#/inbox/${review.id}`} key={review.id}><Avatar initials={review.initials} /><span className="queue-item__main"><b>{review.title}</b><small>{review.author} on {review.pro} · {review.age}</small></span><span className="queue-item__stars">{'★'.repeat(review.rating)}</span></a>)}</div></Card>
+      <Card className="data-card"><CardHeader title="Where reviews come from" subtitle="Every public review, by how it was left" action={<Donut />} /><div className="source-list">{[['Mobile app',38,41],['Website',32,34],['Email request',14,15],['Text link',9,10]].map(([label,value,pct]) => <div className="source-row" key={label as string}><span>{label as string}</span><span className="source-row__value">{value as number}</span><span className="source-row__pct">{pct as number}%</span></div>)}</div></Card>
+      <Card className="data-card"><CardHeader title="Best rated pros" subtitle="Three reviews or more" action={<a className="pill" href="#/pros">Directory <Icon name="arrow" size={12} /></a>} /><ol className="pro-list">{pros.slice(0,5).map((pro,index) => <li key={pro.id}><span className="pro-list__rank">{index+1}</span><Avatar initials={pro.initials} /><span className="cell__text"><b>{pro.name}</b><small>{pro.role} · {pro.reviews} reviews</small></span><span className="pro-list__rating">{pro.rating.toFixed(2)}</span></li>)}</ol></Card>
+    </div>
+    <Card className="team-card" style={{ marginTop: 16 }}><CardHeader title="Team replies" subtitle="The latest answers that went public" action={<Button icon="external" onClick={() => onToast('Opening published replies')}>View all</Button>} /><div className="team-list">{[['JF','Jonah answered R-4792','Yesterday, 2:22 PM · 5★ for Dev','Praise'],['PR','Priya answered R-4794','Yesterday, 2:18 PM · 5★ for Amara','Praise'],['JF','Jonah answered R-4798','Sat, 8:44 PM · 5★ for Tom','Praise'],['JF','Jonah answered R-4804','Sat, 3:14 PM · 3★ for Oscar','Mixed'],['TW','Tomasz answered R-4806','Sat, 7:23 AM · 4★ for Rafael','Praise']].map(([initials,title,detail,tone]) => <div className="team-item" key={title}><Avatar initials={initials} /><b>{title}</b><small>{detail}</small><span className={`pill ${tone === 'Praise' ? 'pill--good' : ''}`}>{tone}</span></div>)}</div></Card>
+  </div>;
+}

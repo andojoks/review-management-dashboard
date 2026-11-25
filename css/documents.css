@@ -1,0 +1,98 @@
+.doc-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--gap);
+    margin-bottom: var(--gap);
+}
+
+.doc-stat {
+    padding: 16px 18px;
+}
+
+.doc-stat strong {
+    display: block;
+    font-size: 26px;
+    letter-spacing: -.05em;
+    margin-top: 9px;
+}
+
+.doc-stat small {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.doc-list {
+    overflow: hidden;
+}
+
+.doc-row {
+    display: grid;
+    grid-template-columns: 1.5fr .65fr .75fr 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--line);
+    font-size: 12px;
+}
+
+.doc-row:last-child {
+    border-bottom: 0
+}
+
+.doc-row--head {
+    background: var(--well);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-size: 10px
+}
+
+.doc-row small {
+    color: var(--muted);
+    display: block;
+    font-size: 10px;
+    margin-top: 3px
+}
+
+.doc-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 7px
+}
+
+.doc-actions .btn {
+    height: 29px;
+    padding: 0 9px;
+    font-size: 10px
+}
+
+.status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--warn);
+    display: inline-block;
+    margin-right: 6px
+}
+
+.status-dot--good {
+    background: var(--good)
+}
+
+.status-dot--draft {
+    background: var(--data-2)
+}
+
+@media (max-width: 700px) {
+    .doc-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .doc-list {
+        overflow-x: auto;
+    }
+
+    .doc-row {
+        min-width: 720px;
+    }
+}
