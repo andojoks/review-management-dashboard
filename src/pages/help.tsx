@@ -1,4 +1,97 @@
-import { Button, Card, PageHeader } from '../ui/kit';
-import { Icon } from '../ui/icons';
+import { useRef, useState, type FormEvent } from 'react';
+import { formatRelative } from '@/ui/data/format';
+import { Card, CardHeader, Empty, Icon, PageHeader, Pill, SearchField } from '@/ui/components';
+import {
+  query as domQuery, reveal, rise, useFlip, usePageMotion,
+} from '@/ui/motion/interactions';
 
-export function Help({ onToast }: { onToast: (message: string) => void }) { const cards=[['Getting started','Understand the review desk, invite the team, and set the 24-hour reply promise.','spark'],['Review workflows','Learn how to route low ratings, suggest replies, and close the loop.','reply'],['Talk to support','Send the Handwell trust team a note and we’ll help you find the next move.','mail']] as const; return <div className="page help-page"><PageHeader title="How can we help?" description="Raveno keeps the important bits close. Pick a guide, or send the team a note when the desk needs a hand." actions={<Button variant="primary" icon="mail" onClick={()=>onToast('Support message composer opened')}>Contact support</Button>} /><div className="help-grid">{cards.map(([title,body,icon])=><Card className="help-card" key={title}><Icon name={icon}/><h3>{title}</h3><p>{body}</p><a href="#/help" onClick={()=>onToast(`${title} guide opened`)}>Read guide <Icon name="arrow" size={13}/></a></Card>)}</div><Card style={{ marginTop:16, padding:22 }}><div className="cell"><span className="mark"><Icon name="help" size={16}/></span><div className="cell__text"><b>Still looking?</b><small>Search the desk with ⌘K or ask the support team for a hand.</small></div><Button icon="search" onClick={()=>onToast('Press ⌘K to search the desk')}>Search help</Button></div></Card></div>; }
+const baseTime = new Date(2026, 10, 9, 10, 24, 0).getTime();
+
+const answers: Array<[string, string]> = [
+  ['When should a review be flagged?', 'Hold a review when it shares personal details, is not about the job, uses abusive language, has no matching booking, or is about money still in dispute. Everything else stays public — even when it is harsh.'],
+  ['Can a client change their review?', 'Yes. Ask them to open the link in their booking email again; the new version replaces the old one and the history is kept for the team.'],
+  ['How fast should we reply?', 'Within the reply deadline in Settings › Review rules (24 hours by default). The queue sorts oldest first so nothing slips.'],
+  ['What makes a pro go live?', 'Four approved documents: photo ID, liability insurance, a trade licence and a background check. Approving the last one puts them live automatically.'],
+  ['Does removing a review change the rating?', 'Yes — a removed review stops counting toward the pro’s average straight away. Restoring it brings it back.'],
+  ['Can pros reply to reviews themselves?', 'Not yet. Pros message the desk from their app and we post the public reply, so every answer keeps the same tone.'],
+];
+
+export function Help({ onToast }: { onToast: (message: string) => void }) {
+  const root = useRef<HTMLDivElement>(null);
+  const faqRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState<number | null>(0);
+  const [tickets, setTickets] = useState([{ subject: 'Text-link reviews arrive without a job name', time: baseTime - 2 * 86400000 }]);
+  const [subject, setSubject] = useState('');
+  const [details, setDetails] = useState('');
+
+  const capture = useFlip(faqRef, '.faq__item', [query, open]);
+  const change = (update: () => void) => { capture(); update(); };
+
+  usePageMotion(root, (page) => {
+    reveal(domQuery(page, '.card'), { stagger: .06 });
+    rise(domQuery(page, '.faq__item'), { y: 10, delay: .2, stagger: .04 });
+  }, []);
+
+  const filtered = answers
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => !query || `${entry[0]} ${entry[1]}`.toLowerCase().includes(query.toLowerCase()));
+
+  const send = (event: FormEvent) => {
+    event.preventDefault();
+    if (subject.trim().length < 4 || details.trim().length < 10) {
+      onToast('Add a subject and a few words');
+      return;
+    }
+    setTickets((current) => [{ subject: subject.trim(), time: baseTime }, ...current]);
+    setSubject('');
+    setDetails('');
+    onToast('Ticket sent — we answer within a working day');
+  };
+
+  return (
+    <div className="page help" ref={root}>
+      <PageHeader title="Help" description="Answers for the trust desk, and a line to Raveno support." />
+      <div className="set__grid">
+        <Card>
+          <CardHeader title="Answers" />
+          <SearchField value={query} onChange={(value) => change(() => setQuery(value))} placeholder="Search answers" />
+          <div className="faq" ref={faqRef}>
+            {filtered.map(({ entry, index }) => (
+              <div className={`faq__item${open === index ? ' is-open' : ''}`} key={entry[0]}>
+                <button type="button" aria-expanded={open === index} onClick={() => change(() => setOpen(open === index ? null : index))}>
+                  <span>{entry[0]}</span><Icon name="chevron" size={14} />
+                </button>
+                {open === index ? <div className="faq__a"><p>{entry[1]}</p></div> : null}
+              </div>
+            ))}
+            {!filtered.length ? <Empty title="No answer for that" body="Send us a ticket instead — a person will reply." /> : null}
+          </div>
+        </Card>
+
+        <div className="stack">
+          <form className="card" onSubmit={send}>
+            <CardHeader title="Ask support" subtitle="Mon–Fri, 8am–6pm" />
+            <div className="formgrid">
+              <label className="field span2"><span>Subject</span><input className="input" value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="What’s going on?" /></label>
+              <label className="field span2"><span>Details</span><textarea className="textarea" value={details} onChange={(event) => setDetails(event.target.value)} /></label>
+            </div>
+            <div className="formfoot"><button type="submit" className="btn btn--primary magnetic"><Icon name="send" size={14} /> Send ticket</button></div>
+          </form>
+
+          <Card className="card--well">
+            <CardHeader title="Your tickets" />
+            {tickets.map((ticket, index) => (
+              <div className="row-set" key={`${ticket.subject}-${ticket.time}`}>
+                <span className="row-set__text"><b>{ticket.subject}</b><small>{formatRelative(ticket.time)}</small></span>
+                <Pill tone={index === 0 && ticket.time >= baseTime - 60000 ? 'info' : 'warn'}>
+                  {index === 0 && ticket.time >= baseTime - 60000 ? 'Sent' : 'Open'}
+                </Pill>
+              </div>
+            ))}
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { installTestBridge } from './app/testBridge';
 import '../app.css';
 import '../css/overview.css';
 import '../css/insights.css';
@@ -9,5 +10,7 @@ import '../css/clients.css';
 import '../css/documents.css';
 import '../css/inbox.css';
 import '../css/settings.css';
+
+installTestBridge();
 
 createRoot(document.getElementById('root')!).render(<App />);

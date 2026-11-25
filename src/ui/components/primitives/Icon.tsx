@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 
-type IconName =
+export type IconName =
   | 'grid' | 'chart' | 'star' | 'wrench' | 'users' | 'file' | 'inbox' | 'gear' | 'help'
   | 'search' | 'chevron' | 'chevR' | 'moon' | 'sun' | 'monitor' | 'bell' | 'plus' | 'send'
   | 'reply' | 'menu' | 'panel' | 'close' | 'more' | 'download' | 'filter' | 'check' | 'clock'
   | 'alert' | 'image' | 'arrow' | 'arrowR' | 'back' | 'external' | 'logo' | 'link' | 'heart'
   | 'mail' | 'user' | 'userPlus' | 'upload' | 'logout' | 'sort' | 'chat' | 'trend'
-  | 'refresh' | 'key' | 'dots' | 'spark';
+  | 'refresh' | 'key' | 'dots' | 'spark' | 'phone' | 'globe' | 'thumb' | 'arrowUR'
+  | 'folder' | 'shield' | 'handshake' | 'list' | 'sheet' | 'note';
 
 const source: Partial<Record<IconName, string>> = {
   logo: '<path d="M5.5 4h13a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H11l-4.5 3.5V17h-1a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/><path d="m12 7.2 1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.3-2.4 1.3.5-2.6-1.9-1.8 2.6-.4z"/>',
@@ -56,6 +57,16 @@ const source: Partial<Record<IconName, string>> = {
   key: '<path d="M14.5 4.5a4.5 4.5 0 0 0-4.2 6.1l-6 6a1.8 1.8 0 0 0 2.6 2.6l6-6A4.5 4.5 0 0 0 19 7.6l-2.7 2.7-2.6-.6-.6-2.6Z"/>',
   dots: '<circle cx="5.5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18.5" cy="12" r="1.3"/>',
   spark: '<path d="m12 3 1.1 6.9L19 12l-5.9 2.1L12 21l-1.1-6.9L5 12l5.9-2.1Z"/><path d="m19 3 .35 1.65L21 5l-1.65.35L19 7l-.35-1.65L17 5l1.65-.35Z"/>',
+  phone: '<path d="M4 10v4a1.5 1.5 0 0 0 1.5 1.5H7l9 4.5V4L7 8.5H5.5A1.5 1.5 0 0 0 4 10Z"/><path d="M8 15.5 9.5 20M19 9.5a3 3 0 0 1 0 5"/>',
+  globe: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.4 3.6 5.2 3.6 8.5S14.4 18.1 12 20.5C9.6 18.1 8.4 15.3 8.4 12S9.6 5.9 12 3.5Z"/>',
+  thumb: '<path d="M7.5 10.5v9.5H4.5v-9.5zM7.5 10.5 11 3.5a2 2 0 0 1 2.5 2l-.5 4h5.3a2 2 0 0 1 2 2.4l-1.3 6.5a2 2 0 0 1-2 1.6H7.5"/>',
+  arrowUR: '<path d="M7 17 17 7M9 7h8v8"/>',
+  folder: '<path d="M3.5 7a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>',
+  shield: '<path d="M12 3.5 4.5 6v5.5c0 4.6 3.2 7.8 7.5 9 4.3-1.2 7.5-4.4 7.5-9V6z"/><path d="m9 12 2 2 4-4"/>',
+  handshake: '<path d="m11 7.5-2.2-1.6a2 2 0 0 0-2.3 0L3 8.5v6l2 1.5"/><path d="m13 7.5 2.2-1.6a2 2 0 0 1 2.3 0L21 8.5v6l-3.5 2.5"/><path d="M8 14l2.5 2.5a1.4 1.4 0 0 0 2-2l-.3-.3M11 15.5l1.5 1.5a1.4 1.4 0 0 0 2-2M13.5 15.5l.8.8a1.4 1.4 0 0 0 2-2l-4.8-4.8-2 1.5a1.5 1.5 0 0 1-2-2.2L11 7"/>',
+  list: '<path d="M9 6.5h11M9 12h11M9 17.5h11M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01"/>',
+  sheet: '<path d="M14 3.5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-10z"/><path d="M14 3.5v5h5M8.5 12.5h7M8.5 16h7M12 11v7"/>',
+  note: '<path d="M5 4.5h14v10l-5 5H5z"/><path d="M14 19.5v-5h5M8.5 9h7M8.5 12.5h4"/>',
 };
 
 const fallback: Record<IconName, ReactNode> = {
@@ -87,14 +98,34 @@ const fallback: Record<IconName, ReactNode> = {
   chat: <path d="M4 5h16v11H9l-5 4z" />, trend: <path d="M3 17l6-6 4 4 8-8M15 7h6v6" />, refresh: <path d="M20 12a8 8 0 1 1-3-6M20 4v5h-5" />,
   key: <><circle cx="8" cy="15" r="4" /><path d="m11 12 9-9M16 7l2 2" /></>, dots: <><circle cx="5" cy="12" r="1.3" /><circle cx="12" cy="12" r="1.3" /><circle cx="19" cy="12" r="1.3" /></>,
   spark: <path d="m12 3 2 7 7 2-7 2-2 7-2-7-7-2 7-2z" />,
+  phone: <><path d="M4 10v4a1.5 1.5 0 0 0 1.5 1.5H7l9 4.5V4L7 8.5H5.5A1.5 1.5 0 0 0 4 10Z" /><path d="M8 15.5 9.5 20M19 9.5a3 3 0 0 1 0 5" /></>,
+  globe: <><circle cx="12" cy="12" r="8.5" /><path d="M3.5 12h17M12 3.5c2.4 2.4 3.6 5.2 3.6 8.5S14.4 18.1 12 20.5C9.6 18.1 8.4 15.3 8.4 12S9.6 5.9 12 3.5Z" /></>,
+  thumb: <path d="M7.5 10.5v9.5H4.5v-9.5zM7.5 10.5 11 3.5a2 2 0 0 1 2.5 2l-.5 4h5.3a2 2 0 0 1 2 2.4l-1.3 6.5a2 2 0 0 1-2 1.6H7.5" />,
+  arrowUR: <path d="M7 17 17 7M9 7h8v8" />,
+  folder: <path d="M3.5 7a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" />,
+  shield: <><path d="M12 3.5 4.5 6v5.5c0 4.6 3.2 7.8 7.5 9 4.3-1.2 7.5-4.4 7.5-9V6z" /><path d="m9 12 2 2 4-4" /></>,
+  handshake: <><path d="m11 7.5-2.2-1.6a2 2 0 0 0-2.3 0L3 8.5v6l2 1.5" /><path d="m13 7.5 2.2-1.6a2 2 0 0 1 2.3 0L21 8.5v6l-3.5 2.5" /><path d="M8 14l2.5 2.5a1.4 1.4 0 0 0 2-2l-.3-.3M11 15.5l1.5 1.5a1.4 1.4 0 0 0 2-2M13.5 15.5l.8.8a1.4 1.4 0 0 0 2-2l-4.8-4.8-2 1.5a1.5 1.5 0 0 1-2-2.2L11 7" /></>,
+  list: <path d="M9 6.5h11M9 12h11M9 17.5h11M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01" />,
+  sheet: <><path d="M14 3.5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-10z" /><path d="M14 3.5v5h5M8.5 12.5h7M8.5 16h7M12 11v7" /></>,
+  note: <><path d="M5 4.5h14v10l-5 5H5z" /><path d="M14 19.5v-5h5M8.5 9h7M8.5 12.5h4" /></>,
 };
 
-export function Icon({ name, size, className = '' }: { name: IconName; size?: number | 'sm' | 'lg'; className?: string }) {
+export interface IconProps {
+  name: IconName;
+  size?: number | 'sm' | 'lg';
+  className?: string;
+}
+
+export function Icon({ name, size, className = '' }: IconProps) {
   const sizeClass = typeof size === 'string' ? ` ico--${size}` : '';
-  const common = { className: `ico${sizeClass}${className ? ` ${className}` : ''}`, viewBox: '0 0 24 24', width: typeof size === 'number' ? size : undefined, height: typeof size === 'number' ? size : undefined, 'aria-hidden': true } as const;
+  const common = {
+    className: `ico${sizeClass}${className ? ` ${className}` : ''}`,
+    viewBox: '0 0 24 24',
+    width: typeof size === 'number' ? size : undefined,
+    height: typeof size === 'number' ? size : undefined,
+    'aria-hidden': true,
+  } as const;
   const markup = source[name];
   if (markup) return <svg {...common} dangerouslySetInnerHTML={{ __html: markup }} />;
   return <svg {...common}>{fallback[name]}</svg>;
 }
-
-export type { IconName };

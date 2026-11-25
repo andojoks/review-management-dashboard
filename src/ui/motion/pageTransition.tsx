@@ -3,6 +3,7 @@ import { gsap } from 'gsap';
 
 const OUT = .18;
 const reduce = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const skipMotion = () => reduce() || /[?&]record\b/.test(window.location.search);
 
 /**
  * Reference page swap: visible cards/rows sink and fade, the outgoing view
@@ -16,8 +17,6 @@ export function ViewTransition({ k, order, children, className = '', onSwap }: {
   onSwap?: () => void;
 }) {
   const [shown, setShown] = useState({ k, node: children });
-  const latest = useRef(children);
-  if (shown.k === k) latest.current = children;
   const view = useRef<HTMLDivElement>(null);
   const current = useRef({ k, node: children, onSwap });
   current.current = { k, node: children, onSwap };
@@ -30,7 +29,7 @@ export function ViewTransition({ k, order, children, className = '', onSwap }: {
     direction.current = order >= previousOrder.current ? 1 : -1;
     previousOrder.current = order;
     const element = view.current;
-    if (!element || reduce()) {
+    if (!element || skipMotion()) {
       current.current.onSwap?.();
       setShown({ k: current.current.k, node: current.current.node });
       return;
@@ -60,6 +59,8 @@ export function ViewTransition({ k, order, children, className = '', onSwap }: {
         setShown({ k: current.current.k, node: current.current.node });
       },
     });
+    // `order` and `shown.k` are read from refs/current to preserve the source transition timing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [k]);
 
   const first = useRef(true);
@@ -68,7 +69,7 @@ export function ViewTransition({ k, order, children, className = '', onSwap }: {
       first.current = false;
       return;
     }
-    if (!view.current || reduce()) return;
+    if (!view.current || skipMotion()) return;
     gsap.set(view.current, { opacity: 1, clearProps: 'opacity' });
     gsap.fromTo(view.current, { x: direction.current * 26 }, {
       x: 0, duration: .7, ease: 'expo.out', overwrite: true, clearProps: 'transform',
