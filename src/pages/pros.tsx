@@ -4,6 +4,7 @@ import { useReviews, type Review } from '@/data/reviewStore';
 import { sourceSnapshot } from '@/data/source';
 import { go } from '@/router';
 import type { ToastOptions } from '@/ui/components/feedback';
+import type { OpenModal } from '@/ui/data/modals';
 import { formatDate, formatNumber, formatRelative, initials } from '@/ui/data/format';
 import { Drawer } from '@/ui/components/overlays';
 import {
@@ -74,7 +75,7 @@ function ProProfile({ pro, reviews }: { pro: Pro; reviews: Review[] }) {
   );
 }
 
-export function Pros({ onToast, sub = 'directory', detailId }: { onToast: (message: string, options?: ToastOptions) => void; sub?: string; detailId?: string }) {
+export function Pros({ onToast, openModal, sub = 'directory', detailId }: { onToast: (message: string, options?: ToastOptions) => void; openModal?: OpenModal; sub?: string; detailId?: string }) {
   const root = useRef<HTMLDivElement>(null);
   const grid = useRef<HTMLDivElement>(null);
   const lanes = useRef<HTMLDivElement>(null);
@@ -138,7 +139,7 @@ export function Pros({ onToast, sub = 'directory', detailId }: { onToast: (messa
         <PageHeader
           title="Pros"
           description="Every tradesperson on Handwell — how they’re rated, and who is still being verified."
-          actions={<Button variant="primary" className="magnetic" icon="userPlus" onClick={() => onToast('Invite sent')}>Invite a pro</Button>}
+          actions={<Button variant="primary" className="magnetic" icon="userPlus" onClick={() => openModal?.({ kind: 'invitePro' })}>Invite a pro</Button>}
         />
         {tabs}
         <div className="lanes" ref={lanes}>
@@ -169,7 +170,7 @@ export function Pros({ onToast, sub = 'directory', detailId }: { onToast: (messa
             <div className="lane__list">
               <Pill tone="good">Ready to take bookings</Pill>
               <p className="lane__empty">Approving the last document puts a pro live and sends them their welcome pack.</p>
-              <button type="button" className="btn btn--sm" onClick={() => onToast('Invite sent')}><Icon name="userPlus" /> Invite another</button>
+              <button type="button" className="btn btn--sm" onClick={() => openModal?.({ kind: 'invitePro' })}><Icon name="userPlus" /> Invite another</button>
             </div>
           </section>
         </div>
@@ -182,7 +183,7 @@ export function Pros({ onToast, sub = 'directory', detailId }: { onToast: (messa
       <PageHeader
         title="Pros"
         description="Every tradesperson on Handwell — how they’re rated, and who is still being verified."
-        actions={<Button variant="primary" className="magnetic" icon="userPlus" onClick={() => onToast('Invite sent')}>Invite a pro</Button>}
+        actions={<Button variant="primary" className="magnetic" icon="userPlus" onClick={() => openModal?.({ kind: 'invitePro' })}>Invite a pro</Button>}
       />
       {tabs}
 

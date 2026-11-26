@@ -5,7 +5,7 @@ const OUT = .18;
 const EXIT_BLOCKS = '.phead, .tabs, .toolbar, .chips';
 const EXIT_CARDS = '.card, .kpi, .lane';
 const reduce = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const skipMotion = () => reduce() || /[?&]record\b/.test(window.location.search);
+const skipMotion = () => reduce();
 
 /**
  * Reference page swap: visible cards/rows sink and fade, the outgoing view

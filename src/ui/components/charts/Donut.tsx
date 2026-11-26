@@ -63,6 +63,3 @@ export function Split({
     </div>
   );
 }
-
-export const Donut = Split;
-export type DonutProps = SplitProps;

@@ -1,7 +1,7 @@
-import { useLayoutEffect, useRef, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, type MouseEvent, type ReactNode } from 'react';
 import gsap from 'gsap';
 import { usePillGroup } from '@/hooks/usePillGroup';
-import { chipShake, iconPop, motionDuration, motionEnabled } from '@/ui/motion/interactions';
+import { iconPop, motionDuration } from '@/ui/motion/interactions';
 import { Icon, type IconName } from './Icon';
 
 export interface TabsProps {
@@ -61,22 +61,24 @@ export function Accordion({ items, active, onChange, className = '' }: Accordion
 
 function AccordionRow({ item, open, onToggle }: { item: AccordionItem; open: boolean; onToggle: () => void }) {
   const answer = useRef<HTMLDivElement>(null);
-  const first = useRef(true);
+  const previous = useRef(open);
 
   useLayoutEffect(() => {
     const element = answer.current;
-    if (!element) return;
-    // The source skips the reveal for the answer that is open on first paint.
-    if (first.current) {
-      first.current = false;
+    if (!element) {
+      previous.current = open;
       return;
     }
-    if (!motionEnabled()) return;
+    // Only the answer already open on first paint skips the reveal. A closed
+    // row must animate the first time the user opens it.
+    if (previous.current === open) return;
+    previous.current = open;
+    if (!open) return;
     gsap.fromTo(element,
       { clipPath: 'inset(0 0 100% 0)', y: -6, opacity: 0 },
       {
         clipPath: 'inset(0 0 0% 0)', y: 0, opacity: 1,
-        duration: .45, ease: 'power3.out',
+        duration: motionDuration(.45), ease: 'power3.out',
         clearProps: 'clipPath,transform,opacity',
       });
   }, [open]);
@@ -296,7 +298,7 @@ export function SelectField({ label, value, onChange, options, className = '' }:
 
 export interface ChipProps {
   active?: boolean;
-  onClick?: () => void;
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
   children: ReactNode;
 }
 
@@ -306,10 +308,7 @@ export function Chip({ active = false, onClick, children }: ChipProps) {
       type="button"
       className="chip"
       aria-pressed={active}
-      onClick={(event) => {
-        chipShake(event.currentTarget);
-        onClick?.();
-      }}
+      onClick={onClick}
     >
       {children}
     </button>
@@ -360,8 +359,4 @@ export function Empty({ icon = 'search', title, body, action }: EmptyProps) {
       {action}
     </div>
   );
-}
-
-export function LinkButton({ href, children }: { href: string; children: ReactNode }) {
-  return <a className="linkbtn" href={href}>{children}</a>;
 }

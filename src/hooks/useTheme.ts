@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { ThemeChoice } from '@/ui/data/notices';
 import { recordMode, reducedMotion } from '@/ui/motion/interactions';
 
-function initialTheme(): ThemeChoice {
+export function initialTheme(): ThemeChoice {
   try {
     const value = JSON.parse(localStorage.getItem('raveno:theme') || '"light"');
     return value === 'dark' || value === 'light' || value === 'system' ? value : 'light';

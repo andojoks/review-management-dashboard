@@ -2,7 +2,7 @@ import { useRef, useState, type FormEvent } from 'react';
 import { formatRelative } from '@/ui/data/format';
 import { Accordion, Card, CardHeader, Empty, Icon, PageHeader, Pill, SearchField } from '@/ui/components';
 import {
-  chipShake, query as domQuery, reveal, rise, useFlip, usePageMotion,
+  chipShake, query as domQuery, reveal, rise, usePageMotion,
 } from '@/ui/motion/interactions';
 
 const baseTime = new Date(2026, 10, 9, 10, 24, 0).getTime();
@@ -18,16 +18,12 @@ const answers: Array<[string, string]> = [
 
 export function Help({ onToast }: { onToast: (message: string) => void }) {
   const root = useRef<HTMLDivElement>(null);
-  const faqRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState<number | null>(0);
   const [tickets, setTickets] = useState([{ subject: 'Text-link reviews arrive without a job name', time: baseTime - 2 * 86400000 }]);
   const [subject, setSubject] = useState('');
   const [details, setDetails] = useState('');
-
-  const capture = useFlip(faqRef, '.faq__item', [query, open]);
-  const change = (update: () => void) => { capture(); update(); };
 
   usePageMotion(root, (page) => {
     reveal(domQuery(page, '.card'), { stagger: .06 });
@@ -57,8 +53,8 @@ export function Help({ onToast }: { onToast: (message: string) => void }) {
       <div className="set__grid">
         <Card>
           <CardHeader title="Answers" />
-          <SearchField value={query} onChange={(value) => change(() => setQuery(value))} placeholder="Search answers" />
-          <div ref={faqRef}>
+          <SearchField value={query} onChange={setQuery} placeholder="Search answers" />
+          <div>
             <Accordion
               active={open === null ? null : String(open)}
               items={filtered.map(({ entry, index }) => ({
@@ -66,7 +62,7 @@ export function Help({ onToast }: { onToast: (message: string) => void }) {
                 question: entry[0],
                 answer: <p>{entry[1]}</p>,
               }))}
-              onChange={(id) => change(() => setOpen(id === null ? null : Number(id)))}
+              onChange={(id) => setOpen(id === null ? null : Number(id))}
             />
             {!filtered.length ? <Empty title="No answer for that" body="Send us a ticket instead — a person will reply." /> : null}
           </div>

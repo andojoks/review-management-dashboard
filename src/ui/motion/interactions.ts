@@ -6,7 +6,8 @@ gsap.registerPlugin(Flip);
 
 export const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 export const recordMode = () => /[?&]record\b/.test(window.location.search);
-export const motionEnabled = () => !reducedMotion() && !recordMode();
+/** Source `X()` animations run outside reduced-motion, including record mode. */
+export const motionEnabled = () => !reducedMotion();
 /** Source `X()` helper: reduced motion collapses every GSAP duration to zero. */
 export const motionDuration = (value: number) => reducedMotion() ? 0 : value;
 
@@ -192,17 +193,6 @@ export function counter(element: HTMLElement | null, value: number, format: (val
     ease: 'power3.out',
     onUpdate: () => { element.textContent = format(state!.v); },
     onComplete: () => { element.textContent = format(value); },
-  });
-}
-
-/** Source `Nc()`: meter fill animation. */
-export function meter(element: HTMLElement | null, value: number, max: number) {
-  if (!element) return;
-  gsap.to(element, {
-    scaleX: Math.max(0, Math.min(1, value / (max || 1))),
-    duration: motionDuration(1),
-    ease: 'expo.out',
-    delay: motionDuration(.15),
   });
 }
 

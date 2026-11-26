@@ -11,7 +11,7 @@ import {
   Avatar, Card, Chip, Empty, Icon, PageHeader, Pill, SearchField, Segmented, Stars, Tabs,
 } from '@/ui/components';
 import {
-  chipShake, popIn, query as domQuery, reducedMotion, reveal, rise, useFlip, usePageMotion,
+  chipShake, iconPop, popIn, query as domQuery, reducedMotion, reveal, rise, useFlip, usePageMotion,
 } from '@/ui/motion/interactions';
 
 type Toast = (message: string, options?: ToastOptions) => void;
@@ -105,7 +105,7 @@ function ReviewDetail({ review, reviews, sub, next, mutate, onHelpful }: DetailP
   }, [review.reply]);
 
   const applyTemplate = (template: string, event: MouseEvent<HTMLButtonElement>) => {
-    chipShake(event.currentTarget);
+    iconPop(event.currentTarget);
     setReply(template);
     if (textarea.current && !reducedMotion()) {
       gsap.fromTo(textarea.current,
@@ -166,7 +166,6 @@ function ReviewDetail({ review, reviews, sub, next, mutate, onHelpful }: DetailP
         <span className="rvd__sp" />
         {review.status !== 'flagged' && review.status !== 'hidden' ? (
           <button type="button" className="btn btn--sm" onClick={(event) => {
-            chipShake(event.currentTarget);
             setFlagAnchor(event.currentTarget);
           }}>
             <Icon name="flag" /> Flag
@@ -213,10 +212,7 @@ function ReviewDetail({ review, reviews, sub, next, mutate, onHelpful }: DetailP
           <button
             type="button"
             className="pill pill--plain rvd__help"
-            onClick={(event) => {
-              chipShake(event.currentTarget);
-              onHelpful(review.id, event.currentTarget);
-            }}
+            onClick={(event) => onHelpful(review.id, event.currentTarget)}
           >
             <Icon name="thumb" size="sm" /> Helpful · {review.helpful}
           </button>
@@ -326,6 +322,7 @@ export function Reviews({ onToast, sub = 'inbox', detailId }: { onToast: Toast; 
   const capture = useFlip(listRef, '.rvl__row', [query, stars, sort, sub, flipKey], {
     duration: .55,
     enterX: -12,
+    leave: false,
   });
 
   useEffect(() => {
@@ -370,12 +367,11 @@ export function Reviews({ onToast, sub = 'inbox', detailId }: { onToast: Toast; 
   };
 
   const onHelpful = (id: string, button: HTMLElement | null) => {
-    chipShake(button);
+    iconPop(button);
     updateReview(id, (review) => { review.helpful += 1; });
   };
 
   const clearFilters = () => {
-    capture();
     setQuery('');
     setStars(0);
   };
@@ -398,15 +394,15 @@ export function Reviews({ onToast, sub = 'inbox', detailId }: { onToast: Toast; 
       <div className="rv__grid">
         <Card className="card--flush rvl" aria-label="Review list">
           <div className="rvl__tools">
-            <SearchField value={query} onChange={(value) => { capture(); setQuery(value); }} placeholder="Search text, pro, client…" />
+            <SearchField value={query} onChange={setQuery} placeholder="Search text, pro, client…" />
             <div className="rvl__row2">
               <div className="chips" role="group" aria-label="Stars">
                 {[0, 5, 4, 3, 2, 1].map((value) => (
                   <Chip
                     key={value}
                     active={stars === value}
-                    onClick={() => {
-                      capture();
+                    onClick={(event) => {
+                      iconPop(event.currentTarget);
                       setStars(value);
                     }}
                   >
@@ -417,7 +413,7 @@ export function Reviews({ onToast, sub = 'inbox', detailId }: { onToast: Toast; 
               <Segmented
                 label="Sort"
                 value={sort}
-                onChange={(value) => { capture(); setSort(value); }}
+                onChange={setSort}
                 options={[
                   { id: 'old', label: 'Oldest', title: 'Oldest first' },
                   { id: 'new', label: 'Newest', title: 'Newest first' },

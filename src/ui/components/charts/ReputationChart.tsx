@@ -6,7 +6,6 @@ export interface ReputationChartProps {
   compare?: number[];
   labels?: string[];
   height?: number;
-  compact?: boolean;
   format?: (value: number) => string;
   compareLabel?: string;
   valueLabel?: string;

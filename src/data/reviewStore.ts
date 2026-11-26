@@ -20,10 +20,6 @@ export function useReviews() {
   return useSyncExternalStore(subscribeReviews, snapshot, snapshot);
 }
 
-export function getReviews() {
-  return reviews;
-}
-
 /** Apply a source-style mutation and return a snapshot for undo. */
 export function updateReview(id: string, update: (review: Review) => void) {
   const before = clone(reviews.find((review) => review.id === id) ?? reviews[0]);
@@ -46,10 +42,6 @@ export function replaceReview(before: Review) {
 export function addReview(review: Review) {
   reviews = [review, ...reviews];
   emit();
-}
-
-export function newReviewCount() {
-  return reviews.filter((review) => review.status === 'new').length;
 }
 
 export function resetReviews() {

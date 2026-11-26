@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { resetDemoData } from '@/data/demoStore';
+import { initialTheme } from '@/hooks/useTheme';
 import { useReviews } from '@/data/reviewStore';
 import { updateSettings, useSettings } from '@/data/settingsStore';
 import { chipShake, query as domQuery, recordMode, reveal, rise, usePageMotion } from '@/ui/motion/interactions';
@@ -23,12 +24,11 @@ const tabs = [
 type Toast = (message: string, options?: ToastOptions) => void;
 
 export function Settings({
-  onToast, openModal, sub = 'profile', themeChoice, setThemeChoice,
+  onToast, openModal, sub = 'profile', setThemeChoice,
 }: {
   onToast: Toast;
   openModal?: OpenModal;
   sub?: string;
-  themeChoice?: ThemeChoice;
   setThemeChoice?: (theme: ThemeChoice) => void;
 }) {
   const root = useRef<HTMLDivElement>(null);
@@ -45,6 +45,7 @@ export function Settings({
       : member.role.includes('moderator') ? 'Moderator' : 'Viewer']),
   ));
   const [confirmReset, setConfirmReset] = useState(false);
+  const [appearanceTheme, setAppearanceTheme] = useState<ThemeChoice>(initialTheme);
   const form = useRef<HTMLFormElement>(null);
 
   usePageMotion(root, (page) => {
@@ -304,8 +305,12 @@ export function Settings({
             </div>
             <Segmented
               label="Theme"
-              value={themeChoice ?? 'light'}
-              onChange={(value) => setThemeChoice?.(value as ThemeChoice)}
+              value={appearanceTheme}
+              onChange={(value) => {
+                const next = value as ThemeChoice;
+                setAppearanceTheme(next);
+                setThemeChoice?.(next);
+              }}
               options={[
                 { id: 'light', label: 'Light', icon: 'sun' },
                 { id: 'dark', label: 'Dark', icon: 'moon' },

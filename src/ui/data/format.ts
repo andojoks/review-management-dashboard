@@ -38,12 +38,6 @@ export function formatMessageTime(time: number) {
   return `${relative} · ${formatTime(time)}`;
 }
 
-export function formatDateTime(time: number) {
-  return new Date(time).toLocaleString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
-  });
-}
-
 export function formatRelative(time: number) {
   return noticeTime(time);
 }

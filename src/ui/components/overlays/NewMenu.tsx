@@ -5,7 +5,6 @@ import { Popover } from './Popover';
 export interface NewMenuProps {
   anchor: HTMLElement | null;
   onClose: () => void;
-  onToast: (message: string) => void;
   openModal: OpenModal;
 }
 

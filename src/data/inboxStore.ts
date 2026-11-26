@@ -2,7 +2,6 @@ import { useSyncExternalStore } from 'react';
 import { sourceSnapshot } from './source';
 
 export type Thread = (typeof sourceSnapshot.threads)[number] & { archived?: boolean };
-export type Message = Thread['msgs'][number];
 
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -19,10 +18,6 @@ const snapshot = () => threads;
 
 export function useInbox() {
   return useSyncExternalStore(subscribeInbox, snapshot, snapshot);
-}
-
-export function getThreads() {
-  return threads;
 }
 
 /** Apply a thread mutation and return a snapshot for source-style undo. */
@@ -43,8 +38,4 @@ export function restoreThreads(before: Thread[]) {
 export function resetInbox() {
   threads = clone(sourceSnapshot.threads);
   emit();
-}
-
-export function unreadCount() {
-  return threads.reduce((sum, thread) => sum + thread.unread, 0);
 }

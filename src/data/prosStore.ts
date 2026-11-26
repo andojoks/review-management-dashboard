@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import {
-  getDocs, restoreDocs, updateDocs, useDocs, type DocsState, type Verification,
+  getDocs, restoreDocs, updateDocs, useDocs, type DocsState,
 } from './docsStore';
 import { sourceSnapshot } from './source';
 
@@ -26,14 +26,6 @@ export function useProsState() {
   const docs = useDocs();
   const currentPros = useSyncExternalStore(subscribePros, snapshot, snapshot);
   return { pros: currentPros, verifications: docs.verifications };
-}
-
-export function getPros() {
-  return pros;
-}
-
-export function getVerifications(): Verification[] {
-  return getDocs().verifications;
 }
 
 interface FullState {

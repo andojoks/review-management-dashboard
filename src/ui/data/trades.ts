@@ -11,5 +11,3 @@ export const trades: Record<string, { label: string; icon: IconName; jobs: strin
   garden: { label: 'Gardener', icon: 'leaf', jobs: 'Hedge reshape' },
   locks: { label: 'Locksmith', icon: 'key', jobs: 'Lock change' },
 };
-
-export const tradeLabel = (trade: string) => trades[trade]?.label ?? trade;

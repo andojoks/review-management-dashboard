@@ -47,8 +47,7 @@ export function normalizeHash(hash = window.location.hash): { route: RouteKey; s
   if (subs) {
     const requested = subs.find((item) => item.id === parts[1]);
     sub = requested ? parts[1] : subs[0].id;
-    if (!requested) params = parts.slice(1);
-    else params = parts.slice(2);
+    if (requested) params = parts.slice(2);
   }
   return { route, sub, detail: params[0] };
 }

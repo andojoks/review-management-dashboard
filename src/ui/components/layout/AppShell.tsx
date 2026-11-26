@@ -108,7 +108,7 @@ export function AppShell({
   setThemeChoice,
 }: AppShellProps) {
   const Page = pageModules[route];
-  const transitionKey = `${route}:${sub || ''}:${detail || ''}`;
+  const transitionKey = `${route}:${sub || ''}`;
 
   return (
     <div className="app">
@@ -144,13 +144,11 @@ export function AppShell({
             <Suspense fallback={null}>
               <Page
                 onToast={onToast}
-                onNotice={onNotice}
                 openModal={openModal}
                 sub={sub}
                 detailId={detail}
                 dark={dark}
                 onTheme={onTheme}
-                themeChoice={themeChoice}
                 setThemeChoice={setThemeChoice}
               />
             </Suspense>
@@ -169,7 +167,6 @@ export function AppShell({
         onClose={onCloseOverlay}
         onOpenShortcuts={onOpenShortcuts}
         onSignOut={onSignOut}
-        onToast={onToast}
         openModal={openModal}
       />
       {drawerOpen ? (

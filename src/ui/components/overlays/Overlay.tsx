@@ -15,7 +15,6 @@ export interface OverlayProps {
   onClose: () => void;
   onOpenShortcuts: () => void;
   onSignOut: () => void;
-  onToast: (message: string) => void;
   openModal: OpenModal;
 }
 
@@ -30,7 +29,6 @@ export function Overlay({
   onClose,
   onOpenShortcuts,
   onSignOut,
-  onToast,
   openModal,
 }: OverlayProps) {
   if (!kind) return null;
@@ -46,7 +44,7 @@ export function Overlay({
       />
     );
   }
-  if (kind === 'new') return <NewMenu anchor={anchor} onClose={onClose} onToast={onToast} openModal={openModal} />;
+  if (kind === 'new') return <NewMenu anchor={anchor} onClose={onClose} openModal={openModal} />;
   return (
     <NotificationsMenu
       anchor={anchor}
