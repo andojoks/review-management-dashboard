@@ -1,7 +1,9 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { gsap } from 'gsap';
 
 const OUT = .18;
+const EXIT_BLOCKS = '.phead, .tabs, .toolbar, .chips';
+const EXIT_CARDS = '.card, .kpi, .lane';
 const reduce = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const skipMotion = () => reduce() || /[?&]record\b/.test(window.location.search);
 
@@ -38,14 +40,14 @@ export function ViewTransition({ k, order, children, className = '', onSwap }: {
     busy.current = true;
 
     const viewport = window.innerHeight;
-    const cards = [...element.querySelectorAll<HTMLElement>('.card, .kpi, .lane')].filter((card) => {
+    const cards = [...element.querySelectorAll<HTMLElement>(EXIT_CARDS)].filter((card) => {
       const box = card.getBoundingClientRect();
       return box.bottom > 0 && box.top < viewport;
     });
 
     gsap.to(cards, { opacity: 0, y: 8, scale: .985, duration: OUT, ease: 'power2.in', stagger: .008, overwrite: true });
-    gsap.to(element.querySelectorAll('.phead, .tabs, .toolbar, .chips'), {
-      opacity: 0, y: -6, duration: OUT * .8, ease: 'power1.in',
+    gsap.to(element.querySelectorAll(EXIT_BLOCKS), {
+      opacity: 0, y: -6, duration: OUT * .8, ease: 'power1.in', overwrite: true,
     });
     gsap.to(element, {
       x: -direction.current * 16,
@@ -70,11 +72,22 @@ export function ViewTransition({ k, order, children, className = '', onSwap }: {
       return;
     }
     if (!view.current || skipMotion()) return;
+    // Same-page tab/detail swaps reuse the page DOM. Clear the inline styles
+    // left by the exit tween so tabs, headers, toolbars and cards stay visible.
+    gsap.set(view.current.querySelectorAll(`${EXIT_CARDS}, ${EXIT_BLOCKS}`), {
+      clearProps: 'opacity,transform',
+    });
     gsap.set(view.current, { opacity: 1, clearProps: 'opacity' });
     gsap.fromTo(view.current, { x: direction.current * 26 }, {
       x: 0, duration: .7, ease: 'expo.out', overwrite: true, clearProps: 'transform',
     });
   }, [shown.k]);
 
-  return <div ref={view} className={className}>{shown.k === k ? children : shown.node}</div>;
+  // Keying the swapped subtree mirrors the source: reused tab/detail DOM nodes
+  // are remounted, so no exit-tween inline styles survive the page change.
+  return (
+    <div ref={view} className={className}>
+      <Fragment key={shown.k}>{shown.k === k ? children : shown.node}</Fragment>
+    </div>
+  );
 }

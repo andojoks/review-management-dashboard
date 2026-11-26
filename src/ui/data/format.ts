@@ -1,3 +1,5 @@
+import { noticeTime } from './clock';
+
 const baseTime = new Date(2026, 10, 9, 10, 24, 0).getTime();
 
 export function formatNumber(value: number) {
@@ -27,14 +29,13 @@ export function formatDate(time: number, withYear = false) {
 }
 
 export function formatTime(time: number) {
-  return new Date(time).toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit' });
+  return new Date(time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
 export function formatMessageTime(time: number) {
   const relative = formatRelative(time);
-  if (!relative.includes('ago')) return relative;
-  const clock = new Date(time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  return `${relative} · ${clock}`;
+  if (relative.includes(':')) return relative;
+  return `${relative} · ${formatTime(time)}`;
 }
 
 export function formatDateTime(time: number) {
@@ -44,12 +45,12 @@ export function formatDateTime(time: number) {
 }
 
 export function formatRelative(time: number) {
-  const minutes = Math.max(0, Math.round((baseTime - time) / 60000));
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes} min ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 12) return `${hours} h ago`;
-  return formatDocDate(time);
+  return noticeTime(time);
+}
+
+/** Source `L()`: count + correctly pluralised noun. */
+export function plural(value: number, singular: string, pluralForm = `${singular}s`) {
+  return `${formatNumber(value)} ${value === 1 ? singular : pluralForm}`;
 }
 
 export function formatDocDate(time: number) {
@@ -67,4 +68,10 @@ export function formatDocDate(time: number) {
 
 export function formatMonth(time: number) {
   return new Date(time).toLocaleDateString('en-US', { month: 'short' });
+}
+
+/** Source `Ms()`: short duration used by team medians and reply charts. */
+export function formatHours(hours: number) {
+  if (hours < 1) return `${Math.round(hours * 60)}m`;
+  return `${Math.floor(hours)}h ${String(Math.round((hours % 1) * 60)).padStart(2, '0')}m`;
 }

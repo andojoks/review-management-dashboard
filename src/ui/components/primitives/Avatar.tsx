@@ -8,7 +8,7 @@ export interface AvatarProps {
   hue?: number;
 }
 
-export function Avatar({ initials, staff = false, online = false, size, hue }: AvatarProps) {
+export function Avatar({ initials, staff = true, online = false, size, hue }: AvatarProps) {
   const sizeClass = size ? ` av--${size}` : '';
   const style = hue === undefined ? undefined : ({ '--h': `var(--h${hue % 6})` } as CSSProperties);
   return (
@@ -18,7 +18,7 @@ export function Avatar({ initials, staff = false, online = false, size, hue }: A
       style={style}
     >
       {initials}
-      {staff || online ? <i className={online || staff ? 'av__dot' : ''} /> : null}
+      {online ? <i className="av__dot" /> : null}
     </span>
   );
 }

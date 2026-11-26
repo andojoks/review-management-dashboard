@@ -1,132 +1,280 @@
-import { useMemo, useRef, useState, type FormEvent } from 'react';
+import {
+  useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent,
+} from 'react';
+import gsap from 'gsap';
+import { restoreThreads, updateThreads, useInbox, type Thread } from '@/data/inboxStore';
+import { useReviews } from '@/data/reviewStore';
 import { sourceSnapshot } from '@/data/source';
-import { formatMessageTime, formatRelative, initials, shortName } from '@/ui/data/format';
+import { useSettings } from '@/data/settingsStore';
+import { sourceNow } from '@/ui/data/clock';
+import {
+  formatMessageTime, formatRelative, initials, shortName,
+} from '@/ui/data/format';
+import { go } from '@/router';
+import type { ToastOptions } from '@/ui/components/feedback';
 import {
   Avatar, Button, Card, Empty, Icon, PageHeader, SearchField, Segmented,
 } from '@/ui/components';
 import {
-  query as domQuery, reveal, rise, useFlip, usePageMotion,
+  chipShake, query as domQuery, reducedMotion, reveal, rise, useFlip, usePageMotion,
 } from '@/ui/motion/interactions';
 
-const people = new Map<string, { name: string; kind: string }>([
-  ...sourceSnapshot.clients.map((client) => [client.id, { name: client.name, kind: 'client' }] as const),
-  ...sourceSnapshot.pros.map((pro) => [pro.id, { name: pro.name, kind: 'pro' }] as const),
-]);
+const replies = [
+  'Thanks, that’s really helpful.',
+  'Perfect — I’ll keep an eye out for it.',
+  'Brilliant, thank you for sorting it so quickly.',
+  'Okay, will do. Speak soon.',
+];
+let replyIndex = 0;
 
-export function Inbox({ detailId, onToast }: { detailId?: string; onToast: (message: string) => void }) {
+const lastText = (thread: Thread) => thread.msgs[thread.msgs.length - 1]?.text ?? '';
+
+interface Person {
+  id: string;
+  name: string;
+  hue?: number;
+}
+
+type Toast = (message: string, options?: ToastOptions) => void;
+
+function Conversation({ thread, people, onToast }: {
+  thread: Thread;
+  people: Map<string, Person>;
+  onToast: Toast;
+}) {
+  const root = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const count = useRef(thread.msgs.length);
+  const timers = useRef<number[]>([]);
+  const [draft, setDraft] = useState('');
+  const [typing, setTyping] = useState(false);
+
+  const who = people.get(thread.who);
+  const reviews = useReviews();
+  const settings = useSettings();
+  const review = thread.review ? reviews.find((item) => item.id === thread.review) : undefined;
+  const folder = review?.status === 'new' ? 'inbox' : review?.status === 'replied' ? 'published' : 'flagged';
+
+  usePageMotion(root, (page) => {
+    rise(domQuery(page, '.msg'), { y: 10, stagger: .04, delay: .1 });
+  }, []);
+
+  useLayoutEffect(() => {
+    const pane = messagesRef.current;
+    if (pane) pane.scrollTop = pane.scrollHeight;
+    if (thread.msgs.length > count.current && pane && !reducedMotion()) {
+      const last = pane.querySelector<HTMLElement>('.msg:last-of-type');
+      if (last) {
+        gsap.fromTo(last,
+          { y: 24, opacity: 0, scale: .94 },
+          { y: 0, opacity: 1, scale: 1, duration: .5, ease: 'back.out(1.8)', clearProps: 'transform,opacity' });
+      }
+    }
+    count.current = thread.msgs.length;
+  }, [thread.msgs.length, typing]);
+
+  useEffect(() => () => timers.current.forEach((timer) => window.clearTimeout(timer)), []);
+
+  const send = (event?: FormEvent) => {
+    event?.preventDefault();
+    const text = draft.trim();
+    if (!text) {
+      chipShake(inputRef.current);
+      return;
+    }
+    updateThreads((draftThreads) => {
+      const target = draftThreads.find((item) => item.id === thread.id);
+      if (target) {
+        target.msgs.push({ from: 'me', text, t: sourceNow(), by: settings.me.id });
+        target.unread = 0;
+      }
+    });
+    setDraft('');
+    timers.current.push(window.setTimeout(() => setTyping(true), 900));
+    timers.current.push(window.setTimeout(() => {
+      setTyping(false);
+      updateThreads((draftThreads) => {
+        const target = draftThreads.find((item) => item.id === thread.id);
+        target?.msgs.push({ from: 'them', text: replies[replyIndex++ % replies.length], t: sourceNow() });
+      });
+    }, 2700));
+  };
+
+  return (
+    <div className="conv" ref={root}>
+      <div className="conv__head">
+        <a className="ibtn ibtn--sm ibtn--flat m-only" href="#/inbox" aria-label="Back to conversations">
+          <Icon name="back" />
+        </a>
+        <Avatar initials={initials(who?.name ?? '?')} hue={who?.hue} />
+        <span className="cell__text">
+          <b>{who?.name}</b>
+          <small>{thread.kind === 'client' ? 'Client' : 'Pro'} · {thread.subject}</small>
+        </span>
+        {review ? (
+          <a className="btn btn--sm d-only" href={`#/reviews/${folder}/${review.id}`}>
+            <Icon name="star" /> {review.id}
+          </a>
+        ) : null}
+        <button
+          type="button"
+          className="ibtn ibtn--sm"
+          aria-label="Archive"
+          data-tip="Archive"
+          onClick={() => {
+            const before = updateThreads((items) => {
+              const target = items.find((item) => item.id === thread.id);
+              if (target) target.archived = true;
+            });
+            onToast('Conversation archived', { undo: () => restoreThreads(before) });
+            go('inbox');
+          }}
+        >
+          <Icon name="archive" />
+        </button>
+      </div>
+      <div className="conv__msgs" ref={messagesRef}>
+        {thread.msgs.map((message, index) => (
+          <div className={`msg msg--${message.from}`} key={`${message.t}-${index}`}>
+            <p>{message.text}</p>
+            <small>
+              {message.from === 'me'
+                ? `${shortName(people.get(('by' in message ? message.by : undefined) ?? '')?.name ?? 'You')} · `
+                : ''}
+              {formatMessageTime(message.t)}
+            </small>
+          </div>
+        ))}
+        {typing ? (
+          <div className="msg msg--them msg--typing" aria-label={`${who?.name ?? 'They'} is typing`}>
+            <i /><i /><i />
+          </div>
+        ) : null}
+      </div>
+      <form className="conv__compose" onSubmit={send}>
+        <textarea
+          className="textarea"
+          rows={1}
+          ref={inputRef}
+          value={draft}
+          aria-label="Message"
+          placeholder={`Write to ${who?.name?.split(' ')[0] ?? 'them'}…`}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault();
+              send();
+            }
+          }}
+        />
+        <button type="submit" className="btn btn--primary" aria-label="Send">
+          <Icon name="send" /><span className="d-only">Send</span>
+        </button>
+      </form>
+    </div>
+  );
+}
+
+export function Inbox({
+  detailId, onToast, openModal,
+}: {
+  detailId?: string;
+  onToast: Toast;
+  openModal?: (request: { kind: 'message'; who?: string }) => void;
+}) {
   const root = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const threads = useInbox();
+  const settings = useSettings();
   const [kind, setKind] = useState('all');
   const [query, setQuery] = useState('');
-  const [draft, setDraft] = useState('');
 
   const capture = useFlip(listRef, '.thr', [kind, query, detailId]);
   const change = (update: () => void) => { capture(); update(); };
 
   usePageMotion(root, (page) => {
     reveal(domQuery(page, '.card'), { stagger: .06 });
-    rise(domQuery(page, '.thr'), { y: 10, delay: .2, stagger: .04 });
-  }, [detailId]);
+    rise(domQuery(page, '.thr'), { y: 10, delay: .2, stagger: .03 });
+  }, []);
 
-  const threads = useMemo(() => {
+  const people = useMemo(() => new Map<string, Person>([
+    ...sourceSnapshot.clients.map((client) => [client.id, client] as const),
+    ...sourceSnapshot.pros.map((pro) => [pro.id, pro] as const),
+    ...settings.team.map((member) => [member.id, member] as const),
+    [settings.me.id, settings.me] as const,
+  ]), [settings]);
+
+  const visible = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return sourceSnapshot.threads
+    return threads
+      .filter((thread) => !thread.archived)
       .filter((thread) => kind === 'all' || thread.kind === kind)
-      .filter((thread) => !term || [thread.subject, people.get(thread.who)?.name].some((value) => value?.toLowerCase().includes(term)))
+      .filter((thread) => !term || [thread.subject, lastText(thread)].some((value) => value.toLowerCase().includes(term)))
       .sort((a, b) => b.msgs[b.msgs.length - 1].t - a.msgs[a.msgs.length - 1].t);
-  }, [kind, query]);
+  }, [threads, kind, query]);
 
-  const active = threads.find((thread) => thread.id === detailId) ?? threads[0];
-  const linkedReview = active?.review ? sourceSnapshot.reviews.find((review) => review.id === active.review) : undefined;
-  const reviewFolder = linkedReview?.status === 'new' ? 'inbox' : linkedReview?.status === 'replied' ? 'published' : 'flagged';
+  const mobile = window.innerWidth <= 760;
+  const active = threads.find((thread) => thread.id === (detailId ?? (mobile ? '' : visible[0]?.id)));
 
-  const send = (event: FormEvent) => {
-    event.preventDefault();
-    if (!draft.trim()) return;
-    onToast(`Reply sent to ${people.get(active?.who ?? '')?.name ?? 'them'}`);
-    setDraft('');
-  };
+  useEffect(() => {
+    if (!active?.unread) return;
+    updateThreads((items) => {
+      const target = items.find((item) => item.id === active.id);
+      if (target) target.unread = 0;
+    });
+  }, [active?.id, active?.unread]);
 
   return (
     <div className={`page ib${detailId ? ' has-sel' : ''}`} ref={root}>
       <PageHeader
         title="Inbox"
         description="Conversations with clients and pros about their reviews."
-        actions={<Button variant="primary" className="magnetic" icon="plus" onClick={() => onToast('New message composer opened')}>New message</Button>}
+        actions={
+          <Button variant="primary" className="magnetic" icon="edit" onClick={() => openModal?.({ kind: 'message' })}>
+            New message
+          </Button>
+        }
       />
 
       <div className="ib__grid">
-        <Card className="card--flush ib__list">
+        <Card className="card--flush ib__list" aria-label="Conversations">
           <div className="ib__tools">
             <SearchField value={query} onChange={(value) => change(() => setQuery(value))} placeholder="Search conversations" />
             <Segmented
-              label="Conversation type"
+              label="Show"
               value={kind}
               onChange={(value) => change(() => setKind(value))}
               options={[{ id: 'all', label: 'All' }, { id: 'client', label: 'Clients' }, { id: 'pro', label: 'Pros' }]}
             />
           </div>
           <ul className="ib__threads" ref={listRef}>
-            {threads.map((thread) => {
+            {visible.map((thread) => {
               const person = people.get(thread.who);
               const last = thread.msgs[thread.msgs.length - 1];
               return (
                 <li className={`thr${thread.id === active?.id ? ' is-on' : ''}${thread.unread ? ' is-unread' : ''}`} data-flip-id={thread.id} key={thread.id}>
                   <a href={`#/inbox/${thread.id}`}>
-                    <Avatar initials={initials(person?.name ?? '?')} hue={thread.kind === 'client' ? 3 : 4} />
+                    <Avatar initials={initials(person?.name ?? '?')} hue={person?.hue} />
                     <span className="thr__text">
                       <span className="thr__top"><b>{person?.name}</b><time>{formatRelative(last.t)}</time></span>
                       <span className="thr__sub">{thread.subject}</span>
                       <small>{last.from === 'me' ? 'You: ' : ''}{last.text}</small>
                     </span>
-                    {thread.unread && thread.id !== active?.id ? <span className="snav__count">{thread.unread}</span> : null}
+                    {thread.unread > 0 ? <span className="snav__count">{thread.unread}</span> : null}
                   </a>
                 </li>
               );
             })}
           </ul>
-          {!threads.length ? <Empty icon="inbox" title="Nothing here" body="No conversations match this search." /> : null}
+          {!visible.length ? <Empty icon="inbox" title="No conversations" body="Nothing matches — try All." /> : null}
         </Card>
 
-        <Card className="card--flush ib__pane">
+        <Card className="card--flush ib__pane" aria-label="Conversation">
           {active ? (
-            <div className="conv">
-              <div className="conv__head">
-                <Avatar initials={initials(people.get(active.who)?.name ?? '?')} size="lg" />
-                <span className="cell__text"><b>{people.get(active.who)?.name}</b><small>{active.kind === 'client' ? 'Client' : 'Pro'} · {active.subject}</small></span>
-                {active.review ? <a className="btn btn--sm d-only" href={`#/reviews/${reviewFolder}/${active.review}`}><Icon name="star" size={13} /> {active.review}</a> : null}
-                <button type="button" className="ibtn ibtn--sm" aria-label="Archive" data-tip="Archive" onClick={() => onToast(`${active.subject} archived`)}><Icon name="check" size={15} /></button>
-              </div>
-              <div className="conv__msgs">
-                {active.msgs.map((message, index) => (
-                  <div className={`msg${message.from === 'me' ? ' msg--me' : ''}`} key={`${message.t}-${index}`}>
-                    <p>{message.text}</p>
-                    <small>{message.from === 'me'
-                      ? `${shortName(sourceSnapshot.team.find((member) => member.id === ('by' in message ? message.by : undefined))?.name ?? 'You')} · ${formatMessageTime(message.t)}`
-                      : formatMessageTime(message.t)}</small>
-                  </div>
-                ))}
-              </div>
-              <form className="conv__compose" onSubmit={send}>
-                <textarea
-                  className="textarea"
-                  rows={1}
-                  value={draft}
-                  aria-label="Message"
-                  placeholder={`Write to ${people.get(active.who)?.name ?? 'them'}…`}
-                  onChange={(event) => setDraft(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' && !event.shiftKey) {
-                      event.preventDefault();
-                      send(event);
-                    }
-                  }}
-                />
-                <button type="submit" className="btn btn--primary" aria-label="Send"><Icon name="send" size={14} /><span className="d-only">Send</span></button>
-              </form>
-            </div>
+            <Conversation key={active.id} thread={active} people={people} onToast={onToast} />
           ) : (
-            <Empty icon="inbox" title="No conversation selected" body="Pick a thread from the list to read and reply." />
+            <Empty icon="chat" title="Pick a conversation" body="Choose one on the left, or start a new message." />
           )}
         </Card>
       </div>

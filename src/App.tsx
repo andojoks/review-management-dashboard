@@ -1,4 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useInbox } from '@/data/inboxStore';
+import type { ModalRequest } from '@/ui/data/modals';
+import { useReviews } from '@/data/reviewStore';
 import { normalizeHash } from '@/router';
 import { AppShell } from '@/ui/components/layout';
 import { initialNotices, type Notice, type OverlayKind } from '@/ui/data/notices';
@@ -24,22 +27,21 @@ export default function App() {
   const [finderOpen, setFinderOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [notices, setNotices] = useState<Notice[]>(initialNotices);
-  const [reviewCount, setReviewCount] = useState(16);
-  const { items: toastItems, push: pushToast } = useToasts();
+  const [modal, setModal] = useState<ModalRequest | null>(null);
+  const reviews = useReviews();
+  const threads = useInbox();
+  const reviewCount = reviews.filter((review) => review.status === 'new').length;
+  const inboxUnread = threads.reduce((sum, thread) => sum + thread.unread, 0);
+  const { items: toastItems, push: pushToast, dismiss: dismissToast } = useToasts();
   const tip = useTooltip();
 
   useDocumentTitle(route, sub);
   useScrollState();
-  useScrollLock(drawerOpen || finderOpen || shortcutsOpen || !signedIn);
+  useScrollLock(drawerOpen || finderOpen || shortcutsOpen || Boolean(modal) || !signedIn);
   useIntroAnimation();
   useNavPills(route, sub, rail, themeChoice);
 
   const noticeUnread = notices.filter((notice) => !notice.read).length;
-
-  useEffect(() => {
-    const canonical = `#/${route}${sub ? `/${sub}` : ''}${detail ? `/${detail}` : ''}`;
-    if (hash !== canonical) window.location.hash = canonical;
-  }, [hash, route, sub, detail]);
 
   const openOverlay = useCallback((kind: OverlayKind, anchor?: HTMLElement | null) => {
     setOverlay((current) => current.kind === kind ? { kind: null, anchor: null } : { kind, anchor: anchor || null });
@@ -47,6 +49,8 @@ export default function App() {
   const closeOverlay = useCallback(() => setOverlay({ kind: null, anchor: null }), []);
   const openFinder = useCallback(() => setFinderOpen(true), []);
   const openShortcuts = useCallback(() => setShortcutsOpen(true), []);
+  const openModal = useCallback((request: ModalRequest) => setModal(request), []);
+  const closeModal = useCallback(() => setModal(null), []);
   const openNew = useCallback(() => {
     const anchor = document.querySelector<HTMLElement>('.top__new');
     if (anchor?.offsetParent) openOverlay('new', anchor);
@@ -60,9 +64,8 @@ export default function App() {
     onOpenNew: openNew,
   });
 
-  const onReview = useCallback((update: (count: number) => number) => setReviewCount(update), []);
   const onNotice = useCallback((notice: Notice) => setNotices((items) => [notice, ...items]), []);
-  useLiveFeed(onReview, onNotice);
+  useLiveFeed(onNotice);
 
   const markAllRead = useCallback(() => {
     setNotices((items) => items.map((notice) => ({ ...notice, read: true })));
@@ -87,7 +90,7 @@ export default function App() {
       signedIn={signedIn}
       notices={notices}
       noticeUnread={noticeUnread}
-      inboxUnread={4}
+      inboxUnread={inboxUnread}
       reviewCount={reviewCount}
       overlayKind={overlay.kind}
       overlayAnchor={overlay.anchor}
@@ -95,6 +98,8 @@ export default function App() {
       finderOpen={finderOpen}
       shortcutsOpen={shortcutsOpen}
       toasts={toastItems}
+      modal={modal}
+      onDismissToast={dismissToast}
       tip={tip}
       onFinder={openFinder}
       onAccount={(anchor) => openOverlay('account', anchor)}
@@ -109,6 +114,9 @@ export default function App() {
       onOpenShortcuts={openShortcuts}
       onSignOut={signOut}
       onToast={pushToast}
+      onNotice={onNotice}
+      openModal={openModal}
+      onCloseModal={closeModal}
       onCloseDrawer={() => setDrawerOpen(false)}
       onCloseFinder={() => setFinderOpen(false)}
       onCloseShortcuts={() => setShortcutsOpen(false)}

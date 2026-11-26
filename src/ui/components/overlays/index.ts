@@ -1,7 +1,10 @@
 export { AccountMenu, type AccountMenuProps } from './AccountMenu';
+export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
 export { Drawer, type DrawerProps } from './Drawer';
 export { Finder, type FinderProps } from './Finder';
+export { GlobalModals, type GlobalModalsProps } from './GlobalModals';
 export { MenuItem, type MenuItemProps } from './MenuItem';
+export { Modal, type ModalProps } from './Modal';
 export { NewMenu, type NewMenuProps } from './NewMenu';
 export { NotificationsMenu, type NotificationsMenuProps } from './NotificationsMenu';
 export { Overlay, type OverlayProps } from './Overlay';

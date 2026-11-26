@@ -301,6 +301,10 @@ export interface FlipOptions {
   enterDuration?: number;
   leaveDuration?: number;
   enterScale?: number;
+  enterX?: number;
+  leave?: boolean;
+  leaveScale?: number;
+  zIndex?: number;
 }
 
 /**
@@ -312,7 +316,7 @@ export function useFlip<T extends HTMLElement>(
   rootRef: RefObject<T | null>,
   selector: string,
   deps: DependencyList,
-  { duration = .5, enterDuration = .4, leaveDuration = .2, enterScale = .92 }: FlipOptions = {},
+  { duration = .5, enterDuration = .4, leaveDuration = .2, enterScale = .92, enterX, leave = true, leaveScale = 1, zIndex }: FlipOptions = {},
 ) {
   const state = useRef<Flip.FlipState | null>(null);
 
@@ -332,18 +336,21 @@ export function useFlip<T extends HTMLElement>(
       duration: motionDuration(duration),
       ease: 'power3.inOut',
       absolute: false,
-      onEnter: (elements) => gsap.fromTo(elements, {
-        opacity: 0,
-        scale: enterScale,
-      }, {
-        opacity: 1,
-        scale: 1,
-        duration: motionDuration(enterDuration),
-      }),
-      onLeave: (elements) => gsap.to(elements, {
-        opacity: 0,
-        duration: motionDuration(leaveDuration),
-      }),
+      ...(zIndex === undefined ? {} : { zIndex }),
+      onEnter: (elements) => gsap.fromTo(elements,
+        enterX === undefined ? { opacity: 0, scale: enterScale } : { opacity: 0, x: enterX },
+        {
+          opacity: 1,
+          ...(enterX === undefined ? { scale: 1 } : { x: 0 }),
+          duration: motionDuration(enterDuration),
+        }),
+      ...(leave ? {
+        onLeave: (elements: Element[]) => gsap.to(elements, {
+          opacity: 0,
+          scale: leaveScale,
+          duration: motionDuration(leaveDuration),
+        }),
+      } : {}),
     });
     return () => { animation.kill(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps

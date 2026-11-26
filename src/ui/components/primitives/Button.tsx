@@ -14,7 +14,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   const variantClass = variant === 'primary' ? ' btn--primary' : variant === 'quiet' ? ' btn--quiet' : '';
   return (
     <button ref={ref} type={type} className={`btn${variantClass}${className ? ` ${className}` : ''}`} {...props}>
-      {icon ? <Icon name={icon} /> : null}
+      {icon ? <><Icon name={icon} />{' '}</> : null}
       {children}
     </button>
   );

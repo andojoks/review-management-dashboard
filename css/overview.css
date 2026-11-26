@@ -76,38 +76,8 @@
     font-size: 10px;
 }
 
-.stars {
-    display: inline-flex;
-    gap: 1px;
-    position: relative;
-    color: #d8dbe1;
-    font-size: var(--star-size, 13px);
-    line-height: 1;
-    letter-spacing: 0;
-}
-
-.stars::after {
-    content: '★★★★★';
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: var(--star-pct, 100%);
-    overflow: hidden;
-    white-space: nowrap;
-    color: currentColor;
-}
-
-.stars .star {
-    color: #464950;
-}
-
-.hero .stars .star {
-    color: #4b4e56;
-}
-
-.hero .stars::after {
-    color: #fff;
-}
+/* Rating stars are rendered as SVG by the shared Stars component (app.css).
+   The legacy text-star layer here duplicated smaller stars behind the SVG row. */
 
 .hero__metrics {
     display: grid;

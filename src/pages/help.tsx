@@ -1,8 +1,8 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { formatRelative } from '@/ui/data/format';
-import { Card, CardHeader, Empty, Icon, PageHeader, Pill, SearchField } from '@/ui/components';
+import { Accordion, Card, CardHeader, Empty, Icon, PageHeader, Pill, SearchField } from '@/ui/components';
 import {
-  query as domQuery, reveal, rise, useFlip, usePageMotion,
+  chipShake, query as domQuery, reveal, rise, useFlip, usePageMotion,
 } from '@/ui/motion/interactions';
 
 const baseTime = new Date(2026, 10, 9, 10, 24, 0).getTime();
@@ -19,6 +19,7 @@ const answers: Array<[string, string]> = [
 export function Help({ onToast }: { onToast: (message: string) => void }) {
   const root = useRef<HTMLDivElement>(null);
   const faqRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState<number | null>(0);
   const [tickets, setTickets] = useState([{ subject: 'Text-link reviews arrive without a job name', time: baseTime - 2 * 86400000 }]);
@@ -40,6 +41,7 @@ export function Help({ onToast }: { onToast: (message: string) => void }) {
   const send = (event: FormEvent) => {
     event.preventDefault();
     if (subject.trim().length < 4 || details.trim().length < 10) {
+      chipShake(formRef.current);
       onToast('Add a subject and a few words');
       return;
     }
@@ -56,27 +58,28 @@ export function Help({ onToast }: { onToast: (message: string) => void }) {
         <Card>
           <CardHeader title="Answers" />
           <SearchField value={query} onChange={(value) => change(() => setQuery(value))} placeholder="Search answers" />
-          <div className="faq" ref={faqRef}>
-            {filtered.map(({ entry, index }) => (
-              <div className={`faq__item${open === index ? ' is-open' : ''}`} key={entry[0]}>
-                <button type="button" aria-expanded={open === index} onClick={() => change(() => setOpen(open === index ? null : index))}>
-                  <span>{entry[0]}</span><Icon name="chevron" size={14} />
-                </button>
-                {open === index ? <div className="faq__a"><p>{entry[1]}</p></div> : null}
-              </div>
-            ))}
+          <div ref={faqRef}>
+            <Accordion
+              active={open === null ? null : String(open)}
+              items={filtered.map(({ entry, index }) => ({
+                id: String(index),
+                question: entry[0],
+                answer: <p>{entry[1]}</p>,
+              }))}
+              onChange={(id) => change(() => setOpen(id === null ? null : Number(id)))}
+            />
             {!filtered.length ? <Empty title="No answer for that" body="Send us a ticket instead — a person will reply." /> : null}
           </div>
         </Card>
 
         <div className="stack">
-          <form className="card" onSubmit={send}>
+          <form className="card" ref={formRef} onSubmit={send}>
             <CardHeader title="Ask support" subtitle="Mon–Fri, 8am–6pm" />
             <div className="formgrid">
               <label className="field span2"><span>Subject</span><input className="input" value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="What’s going on?" /></label>
               <label className="field span2"><span>Details</span><textarea className="textarea" value={details} onChange={(event) => setDetails(event.target.value)} /></label>
             </div>
-            <div className="formfoot"><button type="submit" className="btn btn--primary magnetic"><Icon name="send" size={14} /> Send ticket</button></div>
+            <div className="formfoot"><button type="submit" className="btn btn--primary"><Icon name="send" /> Send ticket</button></div>
           </form>
 
           <Card className="card--well">

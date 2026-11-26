@@ -2,16 +2,19 @@ import { Suspense } from 'react';
 import { routePosition, type RouteKey } from '@/router';
 import { pageModules } from '@/app/pages';
 import { ViewTransition } from '@/ui/motion/pageTransition';
+import type { ModalRequest } from '@/ui/data/modals';
+import type { OpenModal } from '@/ui/data/modals';
 import type { OverlayKind, ThemeChoice } from '@/ui/data/notices';
 import type { Notice } from '@/ui/data/notices';
 import { AllPages } from './AllPages';
 import { MobileTabbar } from './MobileTabbar';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
-import { Toasts, Tooltip } from '@/ui/components/feedback';
+import { Toasts, Tooltip, type ToastItem, type ToastOptions } from '@/ui/components/feedback';
 import {
   Drawer,
   Finder,
+  GlobalModals,
   Overlay,
   ShortcutModal,
   SignIn,
@@ -34,12 +37,14 @@ export interface AppShellProps {
   drawerOpen: boolean;
   finderOpen: boolean;
   shortcutsOpen: boolean;
-  toasts: { id: number; message: string }[];
+  toasts: ToastItem[];
+  modal: ModalRequest | null;
+  onDismissToast: (id: number) => void;
   tip: { text: string; x: number; y: number; side: boolean } | null;
   onFinder: () => void;
   onAccount: (anchor: HTMLElement) => void;
   onMenu: () => void;
-  onTheme: () => void;
+  onTheme: (anchor?: HTMLElement | null) => void;
   onRail: (next: boolean) => void;
   onNotifications: (anchor: HTMLElement) => void;
   onNew: (anchor: HTMLElement) => void;
@@ -48,7 +53,10 @@ export interface AppShellProps {
   onRead: (id: string) => void;
   onOpenShortcuts: () => void;
   onSignOut: () => void;
-  onToast: (message: string) => void;
+  onToast: (message: string, options?: ToastOptions) => void;
+  onNotice: (notice: Notice) => void;
+  openModal: OpenModal;
+  onCloseModal: () => void;
   onCloseDrawer: () => void;
   onCloseFinder: () => void;
   onCloseShortcuts: () => void;
@@ -74,6 +82,8 @@ export function AppShell({
   finderOpen,
   shortcutsOpen,
   toasts,
+  modal,
+  onDismissToast,
   tip,
   onFinder,
   onAccount,
@@ -88,6 +98,9 @@ export function AppShell({
   onOpenShortcuts,
   onSignOut,
   onToast,
+  onNotice,
+  openModal,
+  onCloseModal,
   onCloseDrawer,
   onCloseFinder,
   onCloseShortcuts,
@@ -95,7 +108,7 @@ export function AppShell({
   setThemeChoice,
 }: AppShellProps) {
   const Page = pageModules[route];
-  const transitionKey = `${route}:${sub || ''}`;
+  const transitionKey = `${route}:${sub || ''}:${detail || ''}`;
 
   return (
     <div className="app">
@@ -131,10 +144,14 @@ export function AppShell({
             <Suspense fallback={null}>
               <Page
                 onToast={onToast}
+                onNotice={onNotice}
+                openModal={openModal}
                 sub={sub}
                 detailId={detail}
                 dark={dark}
                 onTheme={onTheme}
+                themeChoice={themeChoice}
+                setThemeChoice={setThemeChoice}
               />
             </Suspense>
           </ViewTransition>
@@ -153,6 +170,7 @@ export function AppShell({
         onOpenShortcuts={onOpenShortcuts}
         onSignOut={onSignOut}
         onToast={onToast}
+        openModal={openModal}
       />
       {drawerOpen ? (
         <Drawer title="Raveno" sub="Handwell review desk · every page" onClose={onCloseDrawer}>
@@ -170,10 +188,18 @@ export function AppShell({
           )}
         </Drawer>
       ) : null}
-      <Finder open={finderOpen} onClose={onCloseFinder} />
+      <Finder open={finderOpen} onClose={onCloseFinder} openModal={openModal} />
       {shortcutsOpen ? <ShortcutModal onClose={onCloseShortcuts} /> : null}
       {tip ? <Tooltip {...tip} /> : null}
-      <Toasts items={toasts} />
+      <Toasts items={toasts} onDismiss={onDismissToast} />
+      {modal ? (
+        <GlobalModals
+          request={modal}
+          onClose={onCloseModal}
+          onToast={onToast}
+          onNotice={onNotice}
+        />
+      ) : null}
       {!signedIn ? <SignIn onEnter={onEnter} /> : null}
     </div>
   );

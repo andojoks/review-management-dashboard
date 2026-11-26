@@ -29,3 +29,21 @@
 .table-wrap {
     overflow: auto
 }
+
+.pros .steps small {
+    display: none
+}
+
+.pros .steps li.is-done .steps__dot {
+    background: var(--ink);
+    color: var(--bg)
+}
+
+.pros .steps li.is-now .steps__dot {
+    box-shadow: inset 0 0 0 2px var(--ink)
+}
+
+.pros .steps li.is-now .steps__dot:after,
+.pros .steps__fill {
+    background: var(--ink)
+}

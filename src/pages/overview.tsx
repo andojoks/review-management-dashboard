@@ -1,7 +1,11 @@
-import { useRef, useState, type CSSProperties } from 'react';
-import { formatNumber, initials, shortName } from '@/ui/data/format';
-import { formatDuration, overviewData } from '@/ui/data/overview';
+import { useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useProsState } from '@/data/prosStore';
+import { useReviews } from '@/data/reviewStore';
+import { useSettings } from '@/data/settingsStore';
 import { tradeLabels } from '@/store';
+import type { OpenModal } from '@/ui/data/modals';
+import { formatNumber, initials, shortName } from '@/ui/data/format';
+import { buildOverviewData, formatDuration } from '@/ui/data/overview';
 import {
   Avatar, Badge, BarChart, Button, Card, CardHeader, Counter, Delta, DetailCard,
   DetailListCard, Icon, MetricTile, PageHeader, Pill, Rating, ReputationChart,
@@ -19,10 +23,20 @@ const baseTime = new Date(2026, 10, 9, 10, 24, 0).getTime();
 const shortDate = (time: number) =>
   new Date(time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-export function Overview({ onToast }: { onToast: (message: string) => void }) {
+export function Overview({ openModal }: { openModal?: OpenModal }) {
   const root = useRef<HTMLDivElement>(null);
-  const [selected, setSelected] = useState(overviewData.metrics[0].id);
-  const metric = overviewData.metrics.find((item) => item.id === selected) ?? overviewData.metrics[0];
+  const reviews = useReviews();
+  const { pros, verifications } = useProsState();
+  const settings = useSettings();
+  const data = useMemo(() => buildOverviewData({
+    userName: settings.me.name,
+    reviews,
+    pros,
+    verifications,
+    team: settings.team,
+  }), [reviews, pros, verifications, settings.me.name, settings.team]);
+  const [selected, setSelected] = useState('reviews');
+  const metric = data.metrics.find((item) => item.id === selected) ?? data.metrics[0];
 
   usePageMotion(root, (page) => {
     reveal(query(page, '.card, .kpi'), { stagger: .05 });
@@ -34,13 +48,13 @@ export function Overview({ onToast }: { onToast: (message: string) => void }) {
   return (
     <div className="page ov" ref={root}>
       <PageHeader
-        title={`Good morning, ${shortName(overviewData.userName)}`}
-        description={`${overviewData.unanswered} reviews are waiting for a reply and ${overviewData.flagged} are held for a check. Ratings are up for the fourth month running.`}
+        title={`Good morning, ${shortName(data.userName)}`}
+        description={`${data.unanswered} reviews are waiting for a reply and ${data.flagged} are held for a check. Ratings are up for the fourth month running.`}
         actions={
           <>
-            <Button icon="send" onClick={() => onToast('Review request composer opened')}>Ask for a review</Button>
+            <Button icon="send" onClick={() => openModal?.({ kind: 'review' })}>Ask for a review</Button>
             <a className="btn btn--primary magnetic" href="#/reviews/inbox">
-              <Icon name="reply" /> Reply queue <Badge inverse>{overviewData.unanswered}</Badge>
+              <Icon name="reply" /> Reply queue <Badge inverse>{data.unanswered}</Badge>
             </a>
           </>
         }
@@ -52,28 +66,28 @@ export function Overview({ onToast }: { onToast: (message: string) => void }) {
             <div>
               <span className="hero__label">Reputation score · November</span>
               <div className="hero__score">
-                <Counter value={overviewData.rating} format={twoDecimals} className="hero__fig" />
+                <Counter value={data.rating} format={twoDecimals} className="hero__fig" />
                 <span className="hero__of">/ 5</span>
               </div>
               <div className="hero__stars">
-                <Stars value={overviewData.rating} size={18} pop />
+                <Stars value={data.rating} size={18} pop />
                 {' '}
-                <Delta value={(overviewData.rating - overviewData.previousRating) / overviewData.previousRating} />
+                <Delta value={(data.rating - data.previousRating) / data.previousRating} />
                 {' '}
                 <small className="hero__vs">vs October</small>
               </div>
             </div>
             <dl className="hero__stats">
-              <div><dt>Reviews this month</dt><dd><Counter value={Number(overviewData.monthReviews.replace(/,/g, ''))} format={whole} /></dd></div>
-              <div><dt>Answered</dt><dd><Counter value={Number(overviewData.answered.replace('%', '')) / 100} format={percentWhole} /></dd></div>
-              <div><dt>Median reply</dt><dd>{formatDuration(overviewData.medianReply)}</dd></div>
+              <div><dt>Reviews this month</dt><dd><Counter value={Number(data.monthReviews.replace(/,/g, ''))} format={whole} /></dd></div>
+              <div><dt>Answered</dt><dd><Counter value={Number(data.answered.replace('%', '')) / 100} format={percentWhole} /></dd></div>
+              <div><dt>Median reply</dt><dd>{formatDuration(data.medianReply)}</dd></div>
             </dl>
           </div>
           <div className="hero__chart">
             <ReputationChart
-              values={overviewData.heroValues}
-              compare={overviewData.heroCompare}
-              labels={overviewData.months}
+              values={data.heroValues}
+              compare={data.heroCompare}
+              labels={data.months}
               format={twoDecimals}
               compareLabel="Last year"
               valueLabel="Average rating"
@@ -87,27 +101,27 @@ export function Overview({ onToast }: { onToast: (message: string) => void }) {
         <Card className="card--well mix" aria-label="Star mix">
           <CardHeader
             title="Star mix"
-            subtitle={`${overviewData.publicCount} public reviews`}
+            subtitle={`${data.publicCount} public reviews`}
             action={<a className="ibtn ibtn--sm ibtn--flat" href="#/insights/ratings" aria-label="Open rating insights"><Icon name="arrowUR" /></a>}
           />
           <ul className="mix__list">
-            {overviewData.starMix.map((entry, index) => (
+            {data.starMix.map((entry, index) => (
               <li className="mix__row" key={entry.stars}>
                 <span className="mix__k">{5 - index}<Icon name="star" size="sm" /></span>
-                <span className="mix__bar"><i style={{ '--f': entry.count / overviewData.publicCount } as CSSProperties} /></span>
+                <span className="mix__bar"><i style={{ '--f': entry.count / (data.publicCount || 1) } as CSSProperties} /></span>
                 <b>{entry.percent}</b>
               </li>
             ))}
           </ul>
           <div className="mix__foot">
-            <span className="disc disc--sm"><Icon name="thumb" size={14} /></span>
-            <p><b>{overviewData.repeatRate}</b> of clients would book again — four or five stars.</p>
+            <span className="disc disc--sm"><Icon name="thumb" /></span>
+            <p><b>{data.repeatRate}</b> of clients would book again — four or five stars.</p>
           </div>
         </Card>
       </div>
 
       <div className="kpis ov__kpis" role="group" aria-label="Pick what the chart shows">
-        {overviewData.metrics.map((tile) => (
+        {data.metrics.map((tile) => (
           <MetricTile
             key={tile.id}
             label={tile.label}
@@ -130,7 +144,7 @@ export function Overview({ onToast }: { onToast: (message: string) => void }) {
             subtitle={`${shortDate(baseTime - 13 * day)} – today · pick a tile above to switch`}
           />
           <BarChart
-            labels={overviewData.barLabels}
+            labels={data.barLabels}
             values={metric.values}
             format={whole}
             highlight={13}
@@ -143,9 +157,9 @@ export function Overview({ onToast }: { onToast: (message: string) => void }) {
           className="card--flush queue"
           title="Needs a reply"
           subtitle="Oldest first answers keep the 24-hour promise"
-          action={<a className="linkbtn" href="#/reviews/inbox">All {overviewData.unanswered}</a>}
+          action={<a className="linkbtn" href="#/reviews/inbox">All {data.unanswered}</a>}
           listClassName="queue__list"
-          items={overviewData.queue}
+          items={data.queue}
           empty={<ul className="queue__list"><li className="queue__empty"><Icon name="check" /> Every review has an answer.</li></ul>}
           renderItem={(item) => (
             <li className="queue__row" key={item.id}>
@@ -167,20 +181,20 @@ export function Overview({ onToast }: { onToast: (message: string) => void }) {
           <Split
             label="Channels"
             format={whole}
-            parts={overviewData.channels.map((channel) => ({
+            parts={data.channels.map((channel) => ({
               name: channel.label,
               value: channel.count,
               color: channel.color,
             }))}
           />
           <ul className="chans">
-            {overviewData.channels.map((channel) => (
+            {data.channels.map((channel) => (
               <li key={channel.key}>
                 <i style={{ background: channel.color }} />
                 <Icon name={channel.icon} size="sm" />
                 <span>{channel.label}</span>
                 <b>{whole(channel.count)}</b>
-                <small>{percentWhole(channel.count / (overviewData.publicCount || 1))}</small>
+                <small>{percentWhole(channel.count / (data.publicCount || 1))}</small>
               </li>
             ))}
           </ul>
@@ -193,7 +207,7 @@ export function Overview({ onToast }: { onToast: (message: string) => void }) {
           action={<a className="linkbtn" href="#/pros/directory">Directory</a>}
           listClassName="lead"
           as="ol"
-          items={overviewData.bestPros}
+          items={data.bestPros}
           renderItem={(pro, index) => (
             <li
               className="lead__row"
@@ -213,7 +227,7 @@ export function Overview({ onToast }: { onToast: (message: string) => void }) {
 
         <DetailCard title="Team replies" subtitle="The latest answers that went public">
           <div className="feed">
-            {overviewData.latestReplies.map((reply) => (
+            {data.latestReplies.map((reply) => (
               <a className="feed__row" href={`#/reviews/published/${reply.id}`} key={reply.id}>
                 <Avatar initials={reply.initials} staff size="sm" />
                 <span className="feed__text">
@@ -225,8 +239,8 @@ export function Overview({ onToast }: { onToast: (message: string) => void }) {
             ))}
           </div>
           <div className="ov__docs" onClick={() => { window.location.hash = '#/documents/verification'; }}>
-            <span className="disc disc--sm"><Icon name="file" size={14} /></span>
-            <span><b>{formatNumber(overviewData.pendingChecks)} documents</b> waiting for a check</span>
+            <span className="disc disc--sm"><Icon name="file" /></span>
+            <span><b>{formatNumber(data.pendingChecks)} documents</b> waiting for a check</span>
             <Icon name="arrowR" size="sm" />
           </div>
         </DetailCard>

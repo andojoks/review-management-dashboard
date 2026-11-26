@@ -7,6 +7,8 @@ type FeedEvent = {
   text: string;
   body: string;
   job: string;
+  proId: string;
+  clientId: string;
 };
 
 function seededRandom(seed: number) {
@@ -61,7 +63,13 @@ export function startLiveFeed(onEvent: (event: FeedEvent, index: number) => void
   const picks = feed.map((item) => {
     const pro = pros[Math.floor(random() * pros.length)];
     const client = clients[Math.floor(random() * clients.length)];
-    return { ...item, body: `${client.name} reviewed ${pro.name}.`, job: jobs[pro.trade] };
+    return {
+      ...item,
+      body: `${client.name} reviewed ${pro.name}.`,
+      job: jobs[pro.trade],
+      proId: pro.id,
+      clientId: client.id,
+    };
   });
 
   let index = 0;

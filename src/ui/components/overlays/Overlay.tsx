@@ -1,3 +1,4 @@
+import type { OpenModal } from '@/ui/data/modals';
 import type { Notice, OverlayKind, ThemeChoice } from '@/ui/data/notices';
 import { AccountMenu } from './AccountMenu';
 import { NewMenu } from './NewMenu';
@@ -15,6 +16,7 @@ export interface OverlayProps {
   onOpenShortcuts: () => void;
   onSignOut: () => void;
   onToast: (message: string) => void;
+  openModal: OpenModal;
 }
 
 export function Overlay({
@@ -29,6 +31,7 @@ export function Overlay({
   onOpenShortcuts,
   onSignOut,
   onToast,
+  openModal,
 }: OverlayProps) {
   if (!kind) return null;
   if (kind === 'account') {
@@ -43,7 +46,7 @@ export function Overlay({
       />
     );
   }
-  if (kind === 'new') return <NewMenu anchor={anchor} onClose={onClose} onToast={onToast} />;
+  if (kind === 'new') return <NewMenu anchor={anchor} onClose={onClose} onToast={onToast} openModal={openModal} />;
   return (
     <NotificationsMenu
       anchor={anchor}

@@ -9,11 +9,12 @@ const duration = (value: number) => reduce() ? 0 : value;
 export interface DrawerProps {
   title: string;
   sub?: string;
+  foot?: (close: () => void) => ReactNode;
   onClose: () => void;
   children: (close: () => void) => ReactNode;
 }
 
-export function Drawer({ title, sub, onClose, children }: DrawerProps) {
+export function Drawer({ title, sub, foot, onClose, children }: DrawerProps) {
   const panel = useRef<HTMLDivElement>(null);
   const scrim = useRef<HTMLDivElement>(null);
   const [closing, setClosing] = useState(false);
@@ -87,6 +88,7 @@ export function Drawer({ title, sub, onClose, children }: DrawerProps) {
           </button>
         </div>
         <div className="drawer__body">{children(close)}</div>
+        {foot ? <div className="drawer__foot">{foot(close)}</div> : null}
       </div>
     </>
   );

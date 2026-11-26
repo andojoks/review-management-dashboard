@@ -10,7 +10,7 @@ export interface TopBarProps {
   dark: boolean;
   unread: number;
   onMenu: () => void;
-  onTheme: () => void;
+  onTheme: (anchor?: HTMLElement | null) => void;
   onNotifications: (anchor: HTMLElement) => void;
   onNew: (anchor: HTMLElement) => void;
 }
@@ -100,7 +100,7 @@ export function TopBar({
             className="ibtn top__theme"
             aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
             data-tip={dark ? 'Light mode' : 'Dark mode'}
-            onClick={onTheme}
+            onClick={(event) => onTheme(event.currentTarget)}
           >
             <Icon name={dark ? 'sun' : 'moon'} />
           </button>

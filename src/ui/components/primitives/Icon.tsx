@@ -2,12 +2,15 @@ import type { ReactNode } from 'react';
 
 export type IconName =
   | 'grid' | 'chart' | 'star' | 'wrench' | 'users' | 'file' | 'inbox' | 'gear' | 'help'
-  | 'search' | 'chevron' | 'chevR' | 'moon' | 'sun' | 'monitor' | 'bell' | 'plus' | 'send'
+  | 'search' | 'chevron' | 'chevR' | 'up' | 'down' | 'moon' | 'sun' | 'monitor' | 'bell' | 'plus' | 'send'
   | 'reply' | 'menu' | 'panel' | 'close' | 'more' | 'download' | 'filter' | 'check' | 'clock'
   | 'alert' | 'image' | 'arrow' | 'arrowR' | 'back' | 'external' | 'logo' | 'link' | 'heart'
   | 'mail' | 'user' | 'userPlus' | 'upload' | 'logout' | 'sort' | 'chat' | 'trend'
-  | 'refresh' | 'key' | 'dots' | 'spark' | 'phone' | 'globe' | 'thumb' | 'arrowUR'
-  | 'folder' | 'shield' | 'handshake' | 'list' | 'sheet' | 'note';
+  | 'refresh' | 'key' | 'dots' | 'spark' | 'sparkle' | 'phone' | 'globe' | 'thumb' | 'arrowUR'
+  | 'folder' | 'shield' | 'handshake' | 'list' | 'sheet' | 'note'
+  | 'flag' | 'eyeoff' | 'undo' | 'quote' | 'play' | 'pause'
+  | 'bolt' | 'chair' | 'drop' | 'pen' | 'home' | 'leaf'
+  | 'edit' | 'archive' | 'trash' | 'minus';
 
 const source: Partial<Record<IconName, string>> = {
   logo: '<path d="M5.5 4h13a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H11l-4.5 3.5V17h-1a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/><path d="m12 7.2 1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.3-2.4 1.3.5-2.6-1.9-1.8 2.6-.4z"/>',
@@ -36,8 +39,8 @@ const source: Partial<Record<IconName, string>> = {
   arrow: '<path d="M7 17 17 7M8.5 7H17v8.5"/>',
   arrowR: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   back: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
-  chat: '<path d="M4 5.5h16v11H9l-5 4z"/>',
-  trend: '<path d="M3.5 17.5 9 12l3.5 3.5L20 8"/><path d="M15.5 8H20v4.5"/>',
+  chat: '<path d="M4.5 18.5V7a2.5 2.5 0 0 1 2.5-2.5h10A2.5 2.5 0 0 1 19.5 7v7a2.5 2.5 0 0 1-2.5 2.5H8.5z"/><path d="M8.5 9.5h7M8.5 12.5h4.5"/>',
+  trend: '<path d="M3.5 17 9 11.5l3.5 3.5 8-8"/><path d="M15 7h5.5v5.5"/>',
   refresh: '<path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4.5v4h-4"/>',
   search: '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/>',
   grid: '<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/>',
@@ -51,13 +54,13 @@ const source: Partial<Record<IconName, string>> = {
   filter: '<path d="M4 6h16M7 12h10M10 18h4"/>',
   check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
   clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
-  external: '<path d="M13 5h6v6M19 5l-8 8"/><path d="M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
-  link: '<path d="M10 13.5a4.5 4.5 0 0 0 6.4.1l1.4-1.4a4.5 4.5 0 0 0-6.4-6.4l-.8.8"/><path d="M14 10.5a4.5 4.5 0 0 0-6.4-.1l-1.4 1.4a4.5 4.5 0 0 0 6.4 6.4l.8-.8"/>',
-  heart: '<path d="M20 8.8c0 5-8 10-8 10s-8-5-8-10a4.5 4.5 0 0 1 8-2.6A4.5 4.5 0 0 1 20 8.8Z"/>',
-  key: '<path d="M14.5 4.5a4.5 4.5 0 0 0-4.2 6.1l-6 6a1.8 1.8 0 0 0 2.6 2.6l6-6A4.5 4.5 0 0 0 19 7.6l-2.7 2.7-2.6-.6-.6-2.6Z"/>',
+  external: '<path d="M14 4.5h5.5V10M19.5 4.5 11 13"/><path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/>',
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.2 1.2"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.2-1.2"/>',
+  heart: '<path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10Z"/>',
+  key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 8.5-8.5M16.5 6.5l2.5 2.5M14 9l2 2"/>',
   dots: '<circle cx="5.5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18.5" cy="12" r="1.3"/>',
   spark: '<path d="m12 3 1.1 6.9L19 12l-5.9 2.1L12 21l-1.1-6.9L5 12l5.9-2.1Z"/><path d="m19 3 .35 1.65L21 5l-1.65.35L19 7l-.35-1.65L17 5l1.65-.35Z"/>',
-  phone: '<path d="M4 10v4a1.5 1.5 0 0 0 1.5 1.5H7l9 4.5V4L7 8.5H5.5A1.5 1.5 0 0 0 4 10Z"/><path d="M8 15.5 9.5 20M19 9.5a3 3 0 0 1 0 5"/>',
+  phone: '<path d="M6.5 3.5h3l1.5 4-2 1.5a11 11 0 0 0 6 6l1.5-2 4 1.5v3a2 2 0 0 1-2 2A16 16 0 0 1 4.5 5.5a2 2 0 0 1 2-2z"/>',
   globe: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.4 3.6 5.2 3.6 8.5S14.4 18.1 12 20.5C9.6 18.1 8.4 15.3 8.4 12S9.6 5.9 12 3.5Z"/>',
   thumb: '<path d="M7.5 10.5v9.5H4.5v-9.5zM7.5 10.5 11 3.5a2 2 0 0 1 2.5 2l-.5 4h5.3a2 2 0 0 1 2 2.4l-1.3 6.5a2 2 0 0 1-2 1.6H7.5"/>',
   arrowUR: '<path d="M7 17 17 7M9 7h8v8"/>',
@@ -67,6 +70,24 @@ const source: Partial<Record<IconName, string>> = {
   list: '<path d="M9 6.5h11M9 12h11M9 17.5h11M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01"/>',
   sheet: '<path d="M14 3.5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-10z"/><path d="M14 3.5v5h5M8.5 12.5h7M8.5 16h7M12 11v7"/>',
   note: '<path d="M5 4.5h14v10l-5 5H5z"/><path d="M14 19.5v-5h5M8.5 9h7M8.5 12.5h4"/>',
+  flag: '<path d="M5.5 21V4M5.5 4.5h11l-2 4 2 4h-11"/>',
+  eyeoff: '<path d="M3.5 3.5l17 17M10 5.7a8.8 8.8 0 0 1 2-.2c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-2.8 3.6M6.4 6.9C3.9 8.6 2.5 12 2.5 12S6 18.5 12 18.5c1.6 0 3-.5 4.2-1.1M9.9 10a2.8 2.8 0 0 0 4 4"/>',
+  undo: '<path d="M9 7 4.5 11.5 9 16"/><path d="M4.5 11.5H15a4.5 4.5 0 0 1 0 9h-2"/>',
+  quote: '<path d="M9.5 7.5H6a1.5 1.5 0 0 0-1.5 1.5v3A1.5 1.5 0 0 0 6 13.5h3v1a3 3 0 0 1-3 3M19.5 7.5H16a1.5 1.5 0 0 0-1.5 1.5v3a1.5 1.5 0 0 0 1.5 1.5h3v1a3 3 0 0 1-3 3"/>',
+  sparkle: '<path d="M12 4v4M12 16v4M4 12h4M16 12h4M6.5 6.5l2.5 2.5M15 15l2.5 2.5M17.5 6.5 15 9M9 15l-2.5 2.5"/>',
+  play: '<path d="M8 5.5v13l10-6.5z"/>',
+  pause: '<path d="M8.5 5.5v13M15.5 5.5v13"/>',
+  up: '<path d="m6 14.5 6-6 6 6"/>',
+  bolt: '<path d="M13 3 5 13.5h6L10.5 21 19 10h-6z"/>',
+  chair: '<path d="M6.5 11V7.5a3 3 0 0 1 3-3h5a3 3 0 0 1 3 3V11"/><path d="M4.5 11.5a1.5 1.5 0 0 1 3 0V14h9v-2.5a1.5 1.5 0 0 1 3 0V17h-15z"/><path d="M6.5 17v3M17.5 17v3"/>',
+  drop: '<path d="M12 3.5s-6 6.4-6 10.7a6 6 0 0 0 12 0C18 9.9 12 3.5 12 3.5Z"/><path d="M9 14.5a3 3 0 0 0 3 3"/>',
+  pen: '<path d="M4.5 19.5c3-1 4-4 6-4s1.5 3 4 3 3-2 5-2"/><path d="m13 4 3 3-7 7-3.5.5L6 11Z"/>',
+  home: '<path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5h-4v-6h-5v6h-4A1.5 1.5 0 0 1 4 19z"/>',
+  leaf: '<path d="M5 19c0-8 5-13.5 14.5-14.5C19 14 13.5 19 5 19Z"/><path d="M5 19c3.5-4 6.5-6.5 10-8.5"/>',
+  edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
+  archive: '<rect x="3.5" y="4" width="17" height="5" rx="1.5"/><path d="M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9M10 13h4"/>',
+  trash: '<path d="M4.5 7h15M10 11v6M14 11v6M6 7l1 12.5a1.5 1.5 0 0 0 1.5 1.5h7a1.5 1.5 0 0 0 1.5-1.5L18 7M9 7V4.5h6V7"/>',
+  minus: '<path d="M5 12h14"/>',
 };
 
 const fallback: Record<IconName, ReactNode> = {
@@ -80,7 +101,7 @@ const fallback: Record<IconName, ReactNode> = {
   gear: <><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /></>,
   help: <><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3v1.2M12 17h.01" /></>,
   search: <><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></>,
-  chevR: <path d="m9 5 7 7-7 7" />, moon: <path d="M20 15A8 8 0 0 1 9 4a8 8 0 1 0 11 11Z" />,
+  chevR: <path d="m9 5 7 7-7 7" />, down: <path d="m6 9.5 6 6 6-6" />, moon: <path d="M20 15A8 8 0 0 1 9 4a8 8 0 1 0 11 11Z" />,
   sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2" /></>,
   monitor: <><rect x="3" y="4" width="18" height="13" rx="2" /><path d="M8 21h8M12 17v4" /></>,
   bell: <><path d="M6 17v-5a6 6 0 0 1 12 0v5l2 2H4z" /><path d="M10 21a2 2 0 0 0 4 0" /></>,
@@ -108,6 +129,24 @@ const fallback: Record<IconName, ReactNode> = {
   list: <path d="M9 6.5h11M9 12h11M9 17.5h11M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01" />,
   sheet: <><path d="M14 3.5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-10z" /><path d="M14 3.5v5h5M8.5 12.5h7M8.5 16h7M12 11v7" /></>,
   note: <><path d="M5 4.5h14v10l-5 5H5z" /><path d="M14 19.5v-5h5M8.5 9h7M8.5 12.5h4" /></>,
+  flag: <path d="M5.5 21V4M5.5 4.5h11l-2 4 2 4h-11" />,
+  eyeoff: <><path d="m3.5 3.5 17 17" /><path d="M10 6a9 9 0 0 1 2-.2c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-2.8 3.6M6.4 7C4 8.6 2.5 12 2.5 12S6 18.5 12 18.5c1.6 0 3-.5 4.2-1.1M10 10a3 3 0 0 0 4 4" /></>,
+  undo: <><path d="M9 7 4.5 11.5 9 16" /><path d="M4.5 11.5H15a4.5 4.5 0 0 1 0 9h-2" /></>,
+  quote: <path d="M9.5 7.5H6a1.5 1.5 0 0 0-1.5 1.5v3A1.5 1.5 0 0 0 6 13.5h3v1a3 3 0 0 1-3 3M19.5 7.5H16a1.5 1.5 0 0 0-1.5 1.5v3a1.5 1.5 0 0 0 1.5 1.5h3v1a3 3 0 0 1-3 3" />,
+  sparkle: <path d="M12 4v4M12 16v4M4 12h4M16 12h4M6.5 6.5l2.5 2.5M15 15l2.5 2.5M17.5 6.5 15 9M9 15l-2.5 2.5" />,
+  play: <path d="M8 5.5v13l10-6.5z" />,
+  pause: <path d="M8.5 5.5v13M15.5 5.5v13" />,
+  up: <path d="m6.5 14.5 5.5-5.5 5.5 5.5" />,
+  bolt: <path d="M13.5 3 6 13h5l-.5 8L18 10.5h-5z" />,
+  chair: <path d="M8 5.5h8v7H8zM7 12.5h10M8.5 12.5v7M15.5 12.5v7" />,
+  drop: <path d="M12 3.5S5.5 10.4 5.5 14a6.5 6.5 0 0 0 13 0C18.5 10.4 12 3.5 12 3.5Z" />,
+  pen: <path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 3L8 18.5zM14 6.5l3.5 3.5" />,
+  home: <path d="m3.5 11 8.5-7 8.5 7M6 9.5V20h12V9.5M10 20v-6h4v6" />,
+  leaf: <path d="M20 4C10 4 5 8 5 14a5 5 0 0 0 5 5c6 0 10-5 10-15ZM5 20c3-5 6.5-8 11-10" />,
+  edit: <path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 3L8 18.5zM14 6.5l3.5 3.5" />,
+  archive: <><rect x="3.5" y="4.5" width="17" height="4" rx="1" /><path d="M5 8.5V19a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8.5M9.5 12.5h5" /></>,
+  trash: <><path d="M4.5 7h15M9 7V4.5h6V7M6.5 7l1 12.5a1 1 0 0 0 1 .5h7a1 1 0 0 0 1-.5L17.5 7M10 11v6M14 11v6" /></>,
+  minus: <path d="M5 12h14" />,
 };
 
 export interface IconProps {

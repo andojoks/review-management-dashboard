@@ -40,7 +40,7 @@ export function MetricTile({
       onClick={onClick}
     >
       <span className="kpi__label">
-        <span className="disc disc--sm"><Icon name={icon} size={14} /></span>
+        <span className="disc disc--sm"><Icon name={icon} /></span>
         {label}
       </span>
       <span className="kpi__value">

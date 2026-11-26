@@ -1,21 +1,70 @@
 import { useMemo, useRef, useState } from 'react';
+import { useReviews, type Review } from '@/data/reviewStore';
 import { sourceSnapshot } from '@/data/source';
-import { formatDate, formatMoney, formatNumber, initials } from '@/ui/data/format';
+import { go } from '@/router';
 import {
-  Avatar, Button, Card, Chip, Counter, DataTable, Empty, PageHeader,
+  formatDate, formatMoney, formatNumber, formatRelative, initials, plural,
+} from '@/ui/data/format';
+import {
+  Avatar, Button, Card, Chip, Counter, DataTable, Drawer, Empty, Icon, PageHeader,
   Pill, SearchField, Stars,
 } from '@/ui/components';
 import { query, reveal, rise, usePageMotion } from '@/ui/motion/interactions';
 
 const statusTone = { active: 'good', new: 'info', quiet: 'plain' } as const;
 const percent = (value: number) => `${Math.round(value * 100)}%`;
+const clientById = new Map(sourceSnapshot.clients.map((client) => [client.id, client]));
+const proById = new Map(sourceSnapshot.pros.map((pro) => [pro.id, pro]));
 
-function reviewsFor(clientId: string) {
-  return sourceSnapshot.reviews.filter((review) => review.client === clientId);
+const reviewFolder = (review: Review) =>
+  review.status === 'new' ? 'inbox' : review.status === 'replied' ? 'published' : 'flagged';
+
+function ClientDetail({ id }: { id: string }) {
+  const reviews = useReviews();
+  const client = clientById.get(id);
+  if (!client) return null;
+  const list = reviews.filter((review) => review.client === id).sort((a, b) => b.t - a.t);
+
+  return (
+    <>
+      <div className="cl__head">
+        <Avatar initials={initials(client.name)} size="xl" hue={client.hue} />
+        <div>
+          <b>{client.email}</b>
+          <small className="muted">{plural(client.jobs, 'job')} · {formatMoney(client.spend)} booked</small>
+        </div>
+      </div>
+      <div className="section-label">{plural(list.length, 'review')}</div>
+      {list.map((review) => (
+        <a
+          className="prof__rev"
+          href={`#/reviews/${reviewFolder(review)}/${review.id}`}
+          key={review.id}
+        >
+          <span className="prof__revtop">
+            <Stars value={review.stars} size={12} />
+            <small>{proById.get(review.pro)?.name ?? 'Pro'} · {formatRelative(review.t)}</small>
+          </span>
+          <b>{review.title}</b>
+          <span>{review.text}</span>
+        </a>
+      ))}
+      {!list.length ? (
+        <Empty icon="star" title="No reviews yet" body="Send a short link — most clients answer within a day." />
+      ) : null}
+    </>
+  );
 }
 
-export function Clients({ onToast, detailId }: { onToast: (message: string) => void; detailId?: string }) {
+export function Clients({
+  onToast, detailId, openModal,
+}: {
+  onToast: (message: string) => void;
+  detailId?: string;
+  openModal?: (request: { kind: 'review'; clientId?: string }) => void;
+}) {
   const root = useRef<HTMLDivElement>(null);
+  const reviews = useReviews();
   const [queryText, setQueryText] = useState('');
   const [status, setStatus] = useState('all');
   const [sort, setSort] = useState<{ key: string; direction: number }>({ key: 'spend', direction: -1 });
@@ -24,6 +73,8 @@ export function Clients({ onToast, detailId }: { onToast: (message: string) => v
     reveal(query(page, '.card, .kpi'), { stagger: .05 });
     rise(query(page, 'tbody tr').slice(0, 14), { delay: .25, stagger: .025 });
   }, []);
+
+  const reviewsFor = (clientId: string) => reviews.filter((review) => review.client === clientId);
 
   const rows = useMemo(() => {
     const term = queryText.trim().toLowerCase();
@@ -41,9 +92,10 @@ export function Clients({ onToast, detailId }: { onToast: (message: string) => v
         const left = value(a); const right = value(b);
         return (typeof left === 'string' ? left.localeCompare(right as string) : left - (right as number)) * sort.direction;
       });
-  }, [queryText, status, sort]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryText, status, sort, reviews]);
 
-  const selected = detailId ? sourceSnapshot.clients.find((client) => client.id === detailId) : undefined;
+  const selected = detailId ? clientById.get(detailId) : undefined;
   const totalSpend = sourceSnapshot.clients.reduce((sum, client) => sum + client.spend, 0);
   const withReview = sourceSnapshot.clients.filter((client) => reviewsFor(client.id).length).length;
   const statusCount = (value: string) => sourceSnapshot.clients.filter((client) => client.status === value).length;
@@ -61,40 +113,38 @@ export function Clients({ onToast, detailId }: { onToast: (message: string) => v
         actions={
           <>
             <Button icon="download" onClick={() => onToast('clients.csv downloaded')}>Export</Button>
-            <Button variant="primary" className="magnetic" icon="send" onClick={() => onToast('Review request composer opened')}>Ask for a review</Button>
+            <Button
+              variant="primary"
+              className="magnetic"
+              icon="send"
+              onClick={() => openModal?.({ kind: 'review' })}
+            >Ask for a review</Button>
           </>
         }
       />
 
       <div className="kpis cl__kpis">
-        <div className="kpi kpi--plain">
+        <div className="kpi">
           <span className="kpi__label">Clients</span>
           <span className="kpi__value"><Counter value={sourceSnapshot.clients.length} format={formatNumber} /></span>
           <span className="kpi__foot">{statusCount('new')} joined this month</span>
         </div>
-        <div className="kpi kpi--plain">
+        <div className="kpi">
           <span className="kpi__label">Booked through Handwell</span>
           <span className="kpi__value"><Counter value={totalSpend} format={formatMoney} /></span>
           <span className="kpi__foot">since they joined</span>
         </div>
-        <div className="kpi kpi--plain">
+        <div className="kpi">
           <span className="kpi__label">Leave a review</span>
           <span className="kpi__value"><Counter value={withReview / sourceSnapshot.clients.length} format={percent} /></span>
           <span className="kpi__foot">at least once</span>
         </div>
-        <div className="kpi kpi--plain">
+        <div className="kpi">
           <span className="kpi__label">Gone quiet</span>
           <span className="kpi__value"><Counter value={statusCount('quiet')} format={formatNumber} /></span>
           <span className="kpi__foot">no booking in 6 months</span>
         </div>
       </div>
-
-      {selected ? (
-        <Card className="cl__head">
-          <Avatar initials={initials(selected.name)} size="xl" hue={selected.hue} />
-          <div><b>{selected.email}</b><small className="muted">{formatNumber(selected.jobs)} jobs · {formatMoney(selected.spend)} booked</small></div>
-        </Card>
-      ) : null}
 
       <Card className="card--flush">
         <div className="toolbar cl__tools">
@@ -114,7 +164,7 @@ export function Clients({ onToast, detailId }: { onToast: (message: string) => v
           rowKey={(_, index) => rows[index].client.id}
           sort={sort}
           onSort={onSort}
-          onRowClick={(row) => { window.location.hash = `#/clients/${row.client.id}`; }}
+          onRowClick={(row) => { go(`clients/${row.client.id}`); }}
           empty={<Empty title="No clients match" body="Clear the search or choose another status." action={<Button onClick={() => { setQueryText(''); setStatus('all'); }}>Clear filters</Button>} />}
           columns={[
             { key: 'name', header: 'Client', headerClassName: '', className: 'm-main', sortKey: 'name', sortable: true, render: ({ client }) => (
@@ -135,6 +185,30 @@ export function Clients({ onToast, detailId }: { onToast: (message: string) => v
           ]}
         />
       </Card>
+
+      {selected ? (
+        <Drawer
+          title={selected.name}
+          sub={`${selected.city} · client since ${formatDate(selected.joined, true)}`}
+          onClose={() => go('clients')}
+          foot={() => (
+            <>
+              <button type="button" className="btn" onClick={() => { go('clients'); go('inbox'); }}>
+                <Icon name="mail" /> Message
+              </button>
+              <button
+                type="button"
+                className="btn btn--primary"
+                onClick={() => { go('clients'); openModal?.({ kind: 'review', clientId: selected.id }); }}
+              >
+                <Icon name="send" /> Ask for a review
+              </button>
+            </>
+          )}
+        >
+          {() => <ClientDetail id={selected.id} />}
+        </Drawer>
+      ) : null}
     </div>
   );
 }

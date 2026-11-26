@@ -61,7 +61,7 @@ export function DataTable<T>({
                   {column.sortable && onSort ? (
                     <button type="button" aria-pressed={active} onClick={() => onSort(key)}>
                       {column.header}
-                      <Icon name={active && sort?.direction === 1 ? 'arrow' : 'sort'} size={12} />
+                      <Icon name={active && sort?.direction === 1 ? 'up' : 'down'} />
                     </button>
                   ) : column.header}
                 </th>

@@ -78,7 +78,7 @@ export function Sidebar({ route, rail, unread, reviewCount, onFinder, onAccount,
           aria-label="Odile Mensah — account"
           data-tip={rail ? 'Odile Mensah' : undefined}
         >
-          <Avatar initials="OM" staff />
+          <Avatar initials="OM" staff online />
           <span className="cell__text"><b>Odile Mensah</b><small>Trust &amp; reviews lead</small></span>
           <Icon name="sort" size="sm" />
         </button>
