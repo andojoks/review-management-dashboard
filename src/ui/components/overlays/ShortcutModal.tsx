@@ -1,4 +1,5 @@
-import { Icon, Kbd } from '@/ui/components/primitives';
+import { Kbd } from '@/ui/components/primitives';
+import { Modal } from './Modal';
 
 const rows: [string, string][] = [
   ['⌘ K', 'Search reviews, pros, clients'],
@@ -18,31 +19,15 @@ const rows: [string, string][] = [
 
 export function ShortcutModal({ onClose }: { onClose: () => void }) {
   return (
-    <div className="modal-wrap" onMouseDown={onClose}>
-      <div
-        className="modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Keyboard shortcuts"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <div className="modal__head">
-          <h2>Keyboard shortcuts</h2>
-          <button type="button" className="ibtn ibtn--flat ibtn--sm" aria-label="Close" onClick={onClose}>
-            <Icon name="close" />
-          </button>
-        </div>
-        <div className="modal__body">
-          <div className="keys">
-            {rows.map(([keys, label]) => (
-              <div className="row-set" key={keys}>
-                <span className="row-set__text"><b>{label}</b></span>
-                <Kbd>{keys}</Kbd>
-              </div>
-            ))}
+    <Modal title="Keyboard shortcuts" onClose={onClose}>
+      <div className="keys">
+        {rows.map(([keys, label]) => (
+          <div className="row-set" key={keys}>
+            <span className="row-set__text"><b>{label}</b></span>
+            <Kbd>{keys}</Kbd>
           </div>
-        </div>
+        ))}
       </div>
-    </div>
+    </Modal>
   );
 }

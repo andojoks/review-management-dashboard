@@ -1,10 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import gsap from 'gsap';
 import { Icon } from '@/ui/components/primitives';
-
-const mobile = () => window.innerWidth <= 760;
-const reduce = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const duration = (value: number) => reduce() ? 0 : value;
+import { isMobileSheet, reduceMotion, sheetDuration, useSheetDrag } from '@/ui/motion/sheet';
+import { SheetGrip } from './SheetGrip';
 
 export interface DrawerProps {
   title: string;
@@ -21,18 +20,19 @@ export function Drawer({ title, sub, foot, onClose, children }: DrawerProps) {
   const close = () => setClosing(true);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const drag = useSheetDrag(panel, close);
 
   useLayoutEffect(() => {
     document.documentElement.classList.add('is-locked');
-    const isMobile = mobile();
-    gsap.fromTo(scrim.current, { opacity: 0 }, { opacity: 1, duration: duration(0.3) });
+    const isMobile = isMobileSheet();
+    gsap.fromTo(scrim.current, { opacity: 0 }, { opacity: 1, duration: sheetDuration(0.3) });
     gsap.fromTo(
       panel.current,
       isMobile ? { yPercent: 100 } : { xPercent: 104 },
-      { xPercent: 0, yPercent: 0, duration: duration(0.6), ease: 'expo.out', clearProps: 'transform' },
+      { xPercent: 0, yPercent: 0, duration: sheetDuration(0.6), ease: 'expo.out', clearProps: 'transform' },
     );
     const rows = panel.current?.querySelectorAll<HTMLElement>('.drawer__body > *');
-    if (rows?.length && !reduce()) {
+    if (rows?.length && !reduceMotion()) {
       gsap.fromTo(rows, { opacity: 0, y: 14 }, {
         opacity: 1,
         y: 0,
@@ -49,15 +49,15 @@ export function Drawer({ title, sub, foot, onClose, children }: DrawerProps) {
 
   useLayoutEffect(() => {
     if (!closing) return;
-    const isMobile = mobile();
-    gsap.to(scrim.current, { opacity: 0, duration: duration(0.25) });
-    if (reduce()) {
+    const isMobile = isMobileSheet();
+    gsap.to(scrim.current, { opacity: 0, duration: sheetDuration(0.25) });
+    if (reduceMotion()) {
       onCloseRef.current();
       return;
     }
     gsap.to(panel.current, {
       ...(isMobile ? { yPercent: 100 } : { xPercent: 104 }),
-      duration: duration(0.32),
+      duration: sheetDuration(0.32),
       ease: 'power3.in',
       onComplete: () => onCloseRef.current(),
     });
@@ -74,11 +74,12 @@ export function Drawer({ title, sub, foot, onClose, children }: DrawerProps) {
     return () => window.removeEventListener('keydown', key);
   }, []);
 
-  return (
+  return createPortal(
     <>
       <div className="scrim" ref={scrim} onClick={close} />
       <div className="drawer" ref={panel} role="dialog" aria-modal="true" tabIndex={-1} aria-label={title}>
-        <div className="drawer__head">
+        <SheetGrip panel={panel} onClose={close} />
+        <div className="drawer__head" {...drag}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h2>{title}</h2>
             {sub ? <p>{sub}</p> : null}
@@ -90,6 +91,7 @@ export function Drawer({ title, sub, foot, onClose, children }: DrawerProps) {
         <div className="drawer__body">{children(close)}</div>
         {foot ? <div className="drawer__foot">{foot(close)}</div> : null}
       </div>
-    </>
+    </>,
+    document.body,
   );
 }

@@ -1897,6 +1897,10 @@ html.is-rail .side__me>.ico {
   inset: 0
 }
 
+.sheet__grip {
+  display: none
+}
+
 [data-theme=dark] .scrim {
   background: #0009
 }
@@ -3000,6 +3004,22 @@ html.is-rail .side__me>.ico {
 }
 
 @media (width<=760px) {
+
+  .sheet__grip {
+    touch-action: none;
+    cursor: grab;
+    place-items: center;
+    height: 22px;
+    margin-bottom: -6px;
+    display: grid
+  }
+
+  .sheet__grip i {
+    background: var(--line-2);
+    border-radius: 5px;
+    width: 40px;
+    height: 5px
+  }
 
   .drawer__head,
   .modal__head {

@@ -9,6 +9,8 @@ export { NewMenu, type NewMenuProps } from './NewMenu';
 export { NotificationsMenu, type NotificationsMenuProps } from './NotificationsMenu';
 export { Overlay, type OverlayProps } from './Overlay';
 export { Popover, type PopoverProps } from './Popover';
+export { SheetGrip } from './SheetGrip';
+export { isMobileSheet, reduceMotion, sheetDuration, useSheetDrag } from '@/ui/motion/sheet';
 export { ShortcutModal } from './ShortcutModal';
 export { SignIn, type SignInProps } from './SignIn';
 export type { Notice, OverlayKind, ThemeChoice } from '@/types';
