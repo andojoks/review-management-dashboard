@@ -1,5 +1,5 @@
 import { go } from '@/router';
-import type { ThemeChoice } from '@/ui/data/notices';
+import type { ThemeChoice } from '@/types';
 import { MenuItem } from './MenuItem';
 import { Popover } from './Popover';
 

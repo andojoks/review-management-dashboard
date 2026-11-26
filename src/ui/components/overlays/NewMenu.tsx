@@ -1,4 +1,4 @@
-import type { OpenModal } from '@/ui/data/modals';
+import type { OpenModal } from '@/types';
 import { MenuItem } from './MenuItem';
 import { Popover } from './Popover';
 

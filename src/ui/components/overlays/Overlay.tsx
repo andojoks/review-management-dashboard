@@ -1,5 +1,5 @@
-import type { OpenModal } from '@/ui/data/modals';
-import type { Notice, OverlayKind, ThemeChoice } from '@/ui/data/notices';
+import type { OpenModal } from '@/types';
+import type { Notice, OverlayKind, ThemeChoice } from '@/types';
 import { AccountMenu } from './AccountMenu';
 import { NewMenu } from './NewMenu';
 import { NotificationsMenu } from './NotificationsMenu';

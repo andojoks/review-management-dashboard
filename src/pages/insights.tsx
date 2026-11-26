@@ -1,10 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
-import { sourceSnapshot } from '@/data/source';
-import { useReviews } from '@/data/reviewStore';
-import { useSettings } from '@/data/settingsStore';
-import { tradeLabels } from '@/store';
+import { useConfig, useInsightsData, useSettings } from '@/stores';
 import { formatHours, formatMonth, formatNumber, initials } from '@/ui/data/format';
-import { trades } from '@/ui/data/trades';
 import type { ToastOptions } from '@/ui/components/feedback';
 import {
   Avatar, BarChart, Button, Card, Counter, DataTable, Delta, Heat, Icon,
@@ -19,23 +15,21 @@ const twoDecimals = (value: number) => value.toFixed(2);
 const oneDecimalPercent = (value: number) => `${(value * 100).toFixed(1)}%`;
 const wholePercent = (value: number) => `${Math.round(value * 100)}%`;
 
-const tradeOffsets: Record<string, number> = {
-  electric: 0.06, carpentry: 0.09, plumbing: -0.11, painting: 0.04,
-  tiling: 0.02, roofing: -0.16, garden: 0.12, locks: -0.05,
-};
-
 type Toast = (message: string, options?: ToastOptions) => void;
 
 export function Insights({ onToast, sub = 'ratings' }: { onToast: Toast; sub?: string }) {
   const root = useRef<HTMLDivElement>(null);
   const [trade, setTrade] = useState('all');
   const [compare, setCompare] = useState('on');
-  const reviews = useReviews();
+  const {
+    reviews, pros, team, history, tradeLabels, ratingBuckets,
+  } = useInsightsData();
   const { prefs } = useSettings();
+  const config = useConfig();
   const narrow = typeof window !== 'undefined' && window.innerWidth <= 760;
 
   const publicReviews = useMemo(() => reviews.filter((review) => review.status !== 'hidden'), [reviews]);
-  const ratingCounts = [5, 4, 3, 2, 1].map((stars) => publicReviews.filter((review) => review.stars === stars).length);
+  const ratingCounts = ratingBuckets.map((stars) => publicReviews.filter((review) => review.stars === stars).length);
   const average = publicReviews.length
     ? publicReviews.reduce((sum, review) => sum + review.stars, 0) / publicReviews.length
     : 0;
@@ -49,7 +43,7 @@ export function Insights({ onToast, sub = 'ratings' }: { onToast: Toast; sub?: s
   const tradeRows = useMemo(() => Object.keys(tradeLabels)
     .map((id) => {
       const matched = publicReviews.filter((review) =>
-        sourceSnapshot.pros.find((pro) => pro.id === review.pro)?.trade === id);
+        pros.find((pro) => pro.id === review.pro)?.trade === id);
       return {
         trade: id,
         count: matched.length,
@@ -58,7 +52,7 @@ export function Insights({ onToast, sub = 'ratings' }: { onToast: Toast; sub?: s
       };
     })
     .filter((row) => row.count)
-    .sort((a, b) => b.rating - a.rating), [publicReviews]);
+    .sort((a, b) => b.rating - a.rating), [publicReviews, pros, tradeLabels]);
 
   usePageMotion(root, (page) => {
     reveal(domQuery(page, '.card, .kpi'), { stagger: .05 });
@@ -66,10 +60,10 @@ export function Insights({ onToast, sub = 'ratings' }: { onToast: Toast; sub?: s
     growX(domQuery(page, '.trow__bar i'), { delay: .25, stagger: .05 });
   }, [sub, trade]);
 
-  const months = sourceSnapshot.history.months.map(formatMonth);
-  const values = sourceSnapshot.history.avgRating.map((value, index) =>
-    Math.min(4.98, Number((value + (trade === 'all' ? 0 : tradeOffsets[trade] * (1 - index / 30))).toFixed(2))));
-  const maxVolume = Math.max(...sourceSnapshot.history.volume);
+  const months = history.months.map(formatMonth);
+  const values = history.avgRating.map((value, index) =>
+    Math.min(4.98, Number((value + (trade === 'all' ? 0 : config.insights.tradeOffsets[trade] * (1 - index / 30))).toFixed(2))));
+  const maxVolume = Math.max(...history.volume);
 
   return (
     <div className="page ins" ref={root}>
@@ -92,8 +86,8 @@ export function Insights({ onToast, sub = 'ratings' }: { onToast: Toast; sub?: s
           <div className="kpis">
             <PlainKpi
               label="Reviews, last 12 months"
-              value={formatNumber(sourceSnapshot.history.volume.reduce((a, b) => a + b, 0))}
-              foot={<><Delta value={(sourceSnapshot.history.volume.reduce((a, b) => a + b, 0) - sourceSnapshot.history.lastYear.reduce((a, b) => a + b, 0)) / sourceSnapshot.history.lastYear.reduce((a, b) => a + b, 0)} /> on the year before</>}
+              value={formatNumber(history.volume.reduce((a, b) => a + b, 0))}
+              foot={<><Delta value={(history.volume.reduce((a, b) => a + b, 0) - history.lastYear.reduce((a, b) => a + b, 0)) / history.lastYear.reduce((a, b) => a + b, 0)} /> on the year before</>}
             />
             <PlainKpi label="Best month" value={`July · ${formatNumber(maxVolume)}`} foot="summer jobs, garden and roofing" />
             <PlainKpi label="Per finished job" value="41%" foot={<><Delta value={0.05} /> since text links</>} />
@@ -110,8 +104,8 @@ export function Insights({ onToast, sub = 'ratings' }: { onToast: Toast; sub?: s
               ]} />
             </div>
             <BarChart
-              values={sourceSnapshot.history.volume}
-              ghost={compare === 'on' ? sourceSnapshot.history.lastYear : undefined}
+              values={history.volume}
+              ghost={compare === 'on' ? history.lastYear : undefined}
               labels={months}
               height={narrow ? 200 : 260}
               ghostLabel="Last year"
@@ -141,7 +135,7 @@ export function Insights({ onToast, sub = 'ratings' }: { onToast: Toast; sub?: s
                 </div>
               </div>
               <ReputationChart
-                values={sourceSnapshot.history.replyHours}
+                values={history.replyHours}
                 compare={[]}
                 labels={months}
                 format={formatHours}
@@ -167,7 +161,7 @@ export function Insights({ onToast, sub = 'ratings' }: { onToast: Toast; sub?: s
             </div>
             <DataTable
               className="table--stack"
-              rows={sourceSnapshot.team.slice().sort((a, b) => a.avgHours - b.avgHours)}
+              rows={team.slice().sort((a, b) => a.avgHours - b.avgHours)}
               rowKey={(member) => member.id}
               rowClassName={() => 'who__row'}
               columns={[
@@ -261,7 +255,7 @@ export function Insights({ onToast, sub = 'ratings' }: { onToast: Toast; sub?: s
               <ul className="trades">
                 {tradeRows.map((row) => (
                   <li className="trow" key={row.trade} onClick={() => setTrade(row.trade)} aria-current={trade === row.trade ? 'true' : undefined}>
-                    <span className="disc disc--sm disc--soft"><Icon name={trades[row.trade]?.icon ?? 'wrench'} /></span>
+                    <span className="disc disc--sm disc--soft"><Icon name={config.pros.tradeIcons[row.trade] ?? 'wrench'} /></span>
                     <span className="cell__text"><b>{tradeLabels[row.trade]}s</b><small>{row.count} reviews{row.low ? ` · ${row.low} low` : ''}</small></span>
                     <span className="trow__bar"><i style={{ '--f': (row.rating - 3) / 2 } as React.CSSProperties} /></span>
                     <b className="trow__v">{row.rating.toFixed(2)}</b>

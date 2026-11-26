@@ -1,14 +1,12 @@
 import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import gsap from 'gsap';
 import { routeIcon } from '@/config/navigation';
-import { useDocs } from '@/data/docsStore';
-import { useProsState } from '@/data/prosStore';
-import { useReviews } from '@/data/reviewStore';
-import { sourceSnapshot } from '@/data/source';
+import {
+  useBootstrap, useConfig, useDocs, useProsState, useReviews,
+} from '@/stores';
 import { go, routeMeta, subMap, type RouteKey } from '@/router';
-import { tradeLabels } from '@/store';
 import { formatDate, initials } from '@/ui/data/format';
-import type { OpenModal } from '@/ui/data/modals';
+import type { ModalRequest, OpenModal } from '@/types';
 import { Avatar, Icon, type IconName } from '@/ui/components/primitives';
 
 const findRoutes: RouteKey[] = [
@@ -45,12 +43,16 @@ export function Finder({ open, onClose, openModal }: FinderProps) {
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
+  const state = useBootstrap();
+  const config = useConfig();
   const reviews = useReviews();
   const { pros } = useProsState();
   const { docs } = useDocs();
+  const tradeLabels = config.pros.tradeLabels;
+  const limits = config.finder.limits;
   const clientById = useMemo(
-    () => new Map(sourceSnapshot.clients.map((client) => [client.id, client])),
-    [],
+    () => new Map(state.clients.map((client) => [client.id, client])),
+    [state.clients],
   );
   const proById = useMemo(() => new Map(pros.map((pro) => [pro.id, pro])), [pros]);
 
@@ -67,7 +69,7 @@ export function Finder({ open, onClose, openModal }: FinderProps) {
 
     pros
       .filter((pro) => matches(pro.name, tradeLabels[pro.trade] ?? pro.trade, pro.city))
-      .slice(0, needle ? 6 : 3)
+      .slice(0, needle ? limits.prosPicked : limits.pros)
       .forEach((pro) => found.push({
         id: `p${pro.id}`,
         group: 'Pros',
@@ -88,20 +90,19 @@ export function Finder({ open, onClose, openModal }: FinderProps) {
           proById.get(review.pro)?.name ?? '',
           clientById.get(review.client)?.name ?? '',
         ))
-        .slice(0, 6)
+        .slice(0, limits.reviews)
         .forEach((review) => found.push({
           id: `r${review.id}`,
           group: 'Reviews',
           title: `${review.id} · ${'★'.repeat(review.stars)} ${review.title}`,
           sub: `${clientById.get(review.client)?.name ?? ''} on ${proById.get(review.pro)?.name ?? ''} · ${formatDate(review.t)}`,
           lead: iconLead('star'),
-          run: () => go(`reviews/${review.status === 'flagged' || review.status === 'hidden'
-            ? 'flagged' : review.status === 'new' ? 'inbox' : 'published'}/${review.id}`),
+          run: () => go(`reviews/${config.clients.reviewFolders[review.status] ?? 'flagged'}/${review.id}`),
         }));
 
-      sourceSnapshot.clients
+      state.clients
         .filter((client) => matches(client.name, client.city, client.email))
-        .slice(0, 5)
+        .slice(0, limits.clients)
         .forEach((client) => found.push({
           id: `c${client.id}`,
           group: 'Clients',
@@ -114,7 +115,7 @@ export function Finder({ open, onClose, openModal }: FinderProps) {
 
       docs
         .filter((doc) => matches(doc.name, doc.folder))
-        .slice(0, 5)
+        .slice(0, limits.documents)
         .forEach((doc) => found.push({
           id: `d${doc.id}`,
           group: 'Documents',
@@ -146,24 +147,23 @@ export function Finder({ open, onClose, openModal }: FinderProps) {
       });
     });
 
-    ([
-      ['Ask for a review', 'send', () => openModal?.({ kind: 'review' })],
-      ['Invite a pro', 'userPlus', () => openModal?.({ kind: 'invitePro' })],
-      ['Upload document', 'upload', () => openModal?.({ kind: 'upload' })],
-      ['New message', 'mail', () => openModal?.({ kind: 'message' })],
-    ] as [string, IconName, () => void][]).forEach(([label, name, run]) => {
+    config.finder.actions.forEach(({ label, icon, modal }) => {
       if (matches(label)) found.push({
         id: `a${label}`,
         group: 'Actions',
         title: label,
         sub: 'Action',
-        lead: iconLead(name),
-        run,
+        lead: iconLead(icon),
+        run: () => openModal?.({ kind: modal } as ModalRequest),
       });
     });
 
     return found;
-  }, [query, reviews, pros, docs, clientById, proById, openModal]);
+  }, [
+    query, reviews, pros, docs, state.clients, config,
+    tradeLabels, limits.pros, limits.prosPicked, limits.reviews, limits.clients, limits.documents,
+    clientById, proById, openModal,
+  ]);
 
   const requestClose = (action?: () => void) => {
     action?.();

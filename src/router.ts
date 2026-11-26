@@ -1,4 +1,6 @@
-export type RouteKey = 'overview' | 'insights' | 'reviews' | 'pros' | 'clients' | 'documents' | 'inbox' | 'settings' | 'help';
+import type { RouteKey } from '@/types';
+
+export type { RouteKey } from '@/types';
 
 /** Source route order, used by the page transition direction. */
 export const routeOrder: RouteKey[] = ['overview', 'insights', 'pros', 'reviews', 'clients', 'documents', 'inbox', 'settings', 'help'];

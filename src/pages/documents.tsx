@@ -1,26 +1,18 @@
 import { useMemo, useRef, useState } from 'react';
-import { restoreDocs, updateDocs, useDocs, type Doc } from '@/data/docsStore';
-import { getSettings } from '@/data/settingsStore';
-import { useProsState } from '@/data/prosStore';
-import { decideVerification } from '@/data/prosStore';
+import {
+  useBootstrap, useConfig, useDecideVerification, useDeleteDoc, useDocs,
+  useProsState, useRestoreState, useStarDoc,
+} from '@/stores';
+import type { Doc } from '@/types';
 import { documentKindIcons, fileSize } from '@/ui/data/documents';
 import { formatDate, formatDocDate, initials, shortName } from '@/ui/data/format';
-import type { OpenModal } from '@/ui/data/modals';
+import type { OpenModal } from '@/types';
 import type { ToastOptions } from '@/ui/components/feedback';
 import {
   Avatar, Button, Card, DataTable, Empty, Icon, MenuItem, PageHeader,
   Pill, Popover, SearchField, Segmented, Tabs,
 } from '@/ui/components';
 import { iconPop, query, reveal, rise, useFlip, usePageMotion } from '@/ui/motion/interactions';
-
-const folders = [
-  { id: 'all', label: 'All files', icon: 'folder' },
-  { id: 'starred', label: 'Starred', icon: 'star' },
-  { id: 'policies', label: 'Policies', icon: 'shield' },
-  { id: 'reports', label: 'Reports', icon: 'chart' },
-  { id: 'contracts', label: 'Contracts', icon: 'handshake' },
-  { id: 'templates', label: 'Templates', icon: 'reply' },
-] as const;
 
 type Toast = (message: string, options?: ToastOptions) => void;
 
@@ -33,8 +25,15 @@ export function Documents({
 }) {
   const root = useRef<HTMLDivElement>(null);
   const grid = useRef<HTMLDivElement>(null);
+  const state = useBootstrap();
+  const config = useConfig();
   const { docs, verifications } = useDocs();
   const { pros } = useProsState();
+  const restoreState = useRestoreState();
+  const decideVerification = useDecideVerification();
+  const deleteDoc = useDeleteDoc();
+  const starDoc = useStarDoc();
+  const folders = config.documents.folders;
   const [folder, setFolder] = useState('all');
   const [view, setView] = useState('grid');
   const [queryText, setQueryText] = useState('');
@@ -51,7 +50,7 @@ export function Documents({
   const change = (update: () => void) => { capture(); update(); };
 
   const pending = verifications.filter((row) => row.status === 'pending').length;
-  const teamById = useMemo(() => new Map(getSettings().team.map((member) => [member.id, member])), []);
+  const teamById = useMemo(() => new Map(state.team.map((member) => [member.id, member])), [state.team]);
   const proById = useMemo(() => new Map(pros.map((pro) => [pro.id, pro])), [pros]);
 
   const files = useMemo(() => {
@@ -90,28 +89,26 @@ export function Documents({
   const open = (kind: 'upload') => openModal?.({ kind });
 
   const decide = (id: string, approved: boolean) => {
-    const mutation = decideVerification(id, approved);
-    if (!mutation) return;
-    onToast(mutation.message, { warn: mutation.warn, undo: mutation.undo });
+    decideVerification.mutate({ id, approved }, {
+      onSuccess: (result) => onToast(result.data.message, {
+        warn: result.data.warn,
+        undo: result.before ? () => restoreState.mutate(result.before) : undefined,
+      }),
+    });
   };
 
   const remove = (doc: Doc) => {
     change(() => {
-      const before = updateDocs((draft) => {
-        const index = draft.docs.findIndex((item) => item.id === doc.id);
-        if (index >= 0) draft.docs.splice(index, 1);
+      deleteDoc.mutate(doc.id, {
+        onSuccess: (result) => onToast(`“${doc.name}” deleted`, {
+          undo: () => restoreState.mutate(result.before),
+        }),
       });
-      onToast(`“${doc.name}” deleted`, { undo: () => restoreDocs(before) });
     });
   };
 
   const toggleStar = (doc: Doc) => {
-    change(() => {
-      updateDocs((draft) => {
-        const target = draft.docs.find((item) => item.id === doc.id);
-        if (target) target.starred = !target.starred;
-      });
-    });
+    change(() => { starDoc.mutate(doc.id); });
   };
 
   const storedBytes = docs.reduce((sum, doc) => sum + doc.size, 0);
@@ -201,8 +198,8 @@ export function Documents({
                 header: 'Status',
                 className: 'm-end',
                 render: (row) => (
-                  <Pill tone={row.status === 'approved' ? 'good' : row.status === 'rejected' ? 'bad' : 'warn'}>
-                    {row.status === 'approved' ? 'Approved' : row.status === 'rejected' ? 'Sent back' : 'To check'}
+                  <Pill tone={config.documents.statusLabels[row.status]?.tone ?? 'warn'}>
+                    {config.documents.statusLabels[row.status]?.label ?? 'To check'}
                   </Pill>
                 ),
               },
@@ -241,7 +238,7 @@ export function Documents({
                       change(() => setFolder(entry.id));
                     }}
                   >
-                    <Icon name={entry.icon} /><span>{entry.label}</span><small>{count}</small>
+                    <Icon name={entry.icon ?? 'folder'} /><span>{entry.label}</span><small>{count}</small>
                   </button>
                 );
               })}

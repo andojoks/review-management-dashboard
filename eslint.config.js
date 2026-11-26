@@ -4,7 +4,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist/**', 'public/assets/**', 'node_modules/**'] },
+  { ignores: ['dist/**', 'public/assets/**', 'public/mockServiceWorker.js', 'node_modules/**'] },
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

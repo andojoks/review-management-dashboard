@@ -1,19 +1,7 @@
-import type { IconName } from '@/ui/components/primitives';
+import type { Notice } from '@/types';
 import { clockBase } from './clock';
 
-export type OverlayKind = null | 'account' | 'new' | 'notifications';
-export type ThemeChoice = 'light' | 'dark' | 'system';
-
-export interface Notice {
-  id: string;
-  icon: IconName;
-  tone: string;
-  title: string;
-  body: string;
-  at: number;
-  read: boolean;
-  href?: string;
-}
+export type { Notice, OverlayKind, ThemeChoice } from '@/types';
 
 export const initialNotices: Notice[] = [
   { id: 'n1', icon: 'star', tone: 'bad', title: 'New 1-star review', body: 'A review for a plumber needs a reply within 24 hours.', at: clockBase - 22 * 60_000, read: false, href: '#/reviews/inbox' },

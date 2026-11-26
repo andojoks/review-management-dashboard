@@ -1,10 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useInbox } from '@/data/inboxStore';
-import type { ModalRequest } from '@/ui/data/modals';
-import { useReviews } from '@/data/reviewStore';
+import {
+  useAddNotice, useBootstrap, useSetSignedIn, useUpdateNotice,
+} from '@/stores';
+import type { ModalRequest, Notice, OverlayKind } from '@/types';
 import { normalizeHash } from '@/router';
 import { AppShell } from '@/ui/components/layout';
-import { initialNotices, type Notice, type OverlayKind } from '@/ui/data/notices';
 import { useDocumentTitle, useScrollLock, useScrollState } from '@/hooks/useDocumentEffects';
 import { useHash } from '@/hooks/useHash';
 import { useIntroAnimation } from '@/hooks/useIntroAnimation';
@@ -21,17 +21,19 @@ export default function App() {
   const { route, sub, detail } = useMemo(() => normalizeHash(hash), [hash]);
   const { choice: themeChoice, setChoice: setThemeChoice, dark, toggle: toggleTheme } = useTheme();
   const { rail, toggle: toggleRail } = useRail();
-  const [signedIn, setSignedIn] = useState(true);
+  const state = useBootstrap();
+  const addNotice = useAddNotice();
+  const updateNotice = useUpdateNotice();
+  const setSignedIn = useSetSignedIn();
+  const signedIn = state.signedIn;
   const [overlay, setOverlay] = useState<{ kind: OverlayKind; anchor: HTMLElement | null }>({ kind: null, anchor: null });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [finderOpen, setFinderOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const [notices, setNotices] = useState<Notice[]>(initialNotices);
+  const notices = state.notices;
   const [modal, setModal] = useState<ModalRequest | null>(null);
-  const reviews = useReviews();
-  const threads = useInbox();
-  const reviewCount = reviews.filter((review) => review.status === 'new').length;
-  const inboxUnread = threads.reduce((sum, thread) => sum + thread.unread, 0);
+  const reviewCount = state.reviews.filter((review) => review.status === 'new').length;
+  const inboxUnread = state.threads.reduce((sum, thread) => sum + thread.unread, 0);
   const { items: toastItems, push: pushToast, dismiss: dismissToast } = useToasts();
   const tip = useTooltip();
 
@@ -64,20 +66,22 @@ export default function App() {
     onOpenNew: openNew,
   });
 
-  const onNotice = useCallback((notice: Notice) => setNotices((items) => [notice, ...items]), []);
+  const onNotice = useCallback((notice: Notice) => addNotice.mutate(notice), [addNotice]);
   useLiveFeed(onNotice);
 
   const markAllRead = useCallback(() => {
-    setNotices((items) => items.map((notice) => ({ ...notice, read: true })));
-  }, []);
+    notices.forEach((notice) => {
+      if (!notice.read) updateNotice.mutate({ id: notice.id, patch: { read: true } });
+    });
+  }, [notices, updateNotice]);
   const readNotice = useCallback((id: string) => {
-    setNotices((items) => items.map((notice) => notice.id === id ? { ...notice, read: true } : notice));
-  }, []);
+    updateNotice.mutate({ id, patch: { read: true } });
+  }, [updateNotice]);
   const signOut = useCallback(() => {
-    setSignedIn(false);
+    setSignedIn.mutate(false);
     pushToast('Welcome back, Odile');
-  }, [pushToast]);
-  const enter = useCallback(() => setSignedIn(true), []);
+  }, [pushToast, setSignedIn]);
+  const enter = useCallback(() => setSignedIn.mutate(true), [setSignedIn]);
 
   return (
     <AppShell

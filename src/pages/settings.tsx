@@ -1,25 +1,16 @@
 import { useRef, useState, type FormEvent } from 'react';
-import { resetDemoData } from '@/data/demoStore';
 import { initialTheme } from '@/hooks/useTheme';
-import { useReviews } from '@/data/reviewStore';
-import { updateSettings, useSettings } from '@/data/settingsStore';
+import { useConfig, useResetDemo, useReviews, useSettings, useUpdateSettings } from '@/stores';
+import type { Prefs } from '@/types';
 import { chipShake, query as domQuery, recordMode, reveal, rise, usePageMotion } from '@/ui/motion/interactions';
 import { formatHours, formatNumber, initials } from '@/ui/data/format';
-import type { OpenModal } from '@/ui/data/modals';
+import type { OpenModal } from '@/types';
 import type { ToastOptions } from '@/ui/components/feedback';
-import type { ThemeChoice } from '@/ui/data/notices';
+import type { ThemeChoice } from '@/types';
 import {
   Avatar, ConfirmDialog, Icon, PageHeader, Pill, Segmented, SelectField,
   Stepper, Switch, Tabs,
 } from '@/ui/components';
-
-const tabs = [
-  { id: 'profile', label: 'Profile' },
-  { id: 'team', label: 'Team' },
-  { id: 'rules', label: 'Review rules' },
-  { id: 'notifications', label: 'Notifications' },
-  { id: 'data', label: 'Data' },
-];
 
 type Toast = (message: string, options?: ToastOptions) => void;
 
@@ -32,9 +23,14 @@ export function Settings({
   setThemeChoice?: (theme: ThemeChoice) => void;
 }) {
   const root = useRef<HTMLDivElement>(null);
+  const config = useConfig();
+  const tabs = config.settings.tabs;
   const active = tabs.some((tab) => tab.id === sub) ? sub : 'profile';
   const settings = useSettings();
   const reviews = useReviews();
+  const saveSettings = useUpdateSettings();
+  const resetDemo = useResetDemo();
+  const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
   const { me, team, prefs } = settings;
   const [name, setName] = useState(me.name);
   const [email, setEmail] = useState(me.email);
@@ -60,17 +56,19 @@ export function Settings({
       onToast('Check your name and email', { warn: true });
       return;
     }
-    updateSettings((draft) => {
-      draft.me.name = name.trim();
-      draft.me.email = email.trim();
-      draft.team[0].name = name.trim();
-      draft.prefs.signature = signature;
+    saveSettings.mutate({
+      name: name.trim(),
+      email: email.trim(),
+      teamName: name.trim(),
+      signature,
     });
     onToast('Profile saved');
   };
 
-  const changePrefs = (mutate: (draft: typeof prefs) => void, message: string) => {
-    updateSettings((draft) => mutate(draft.prefs));
+  const changePrefs = (mutate: (draft: Prefs) => void, message: string) => {
+    const draft = clone(prefs);
+    mutate(draft);
+    saveSettings.mutate({ prefs: draft });
     onToast(message);
   };
 
@@ -166,7 +164,7 @@ export function Settings({
                           onToast(`${member.name} is now ${value}`);
                         }}
                       >
-                        <option>Admin</option><option>Moderator</option><option>Viewer</option>
+                        {config.settings.accessLevels.map((level) => <option key={level}>{level}</option>)}
                       </select>
                     </td>
                     <td className="m-end">
@@ -242,7 +240,7 @@ export function Settings({
                 label="Reply deadline"
                 value={String(prefs.sla)}
                 onChange={(value) => changePrefs((draft) => { draft.sla = Number(value); }, `Reply within ${value} hours`)}
-                options={[{ id: '12', label: '12h' }, { id: '24', label: '24h' }, { id: '48', label: '48h' }]}
+                options={config.settings.slaOptions}
               />
             </div>
           </section>
@@ -254,13 +252,7 @@ export function Settings({
               </div>
             </div>
             <ul className="set__reasons">
-              {[
-                'Personal details — phone numbers, addresses',
-                'Off-topic — not about the job',
-                'Abusive language',
-                'Possible fake — no booking found',
-                'Dispute open — money still in question',
-              ].map((reason) => <li key={reason}><Icon name="flag" size="sm" />{reason}</li>)}
+              {config.settings.heldReasons.map((reason) => <li key={reason}><Icon name="flag" size="sm" />{reason}</li>)}
             </ul>
           </section>
         </div>
@@ -311,11 +303,7 @@ export function Settings({
                 setAppearanceTheme(next);
                 setThemeChoice?.(next);
               }}
-              options={[
-                { id: 'light', label: 'Light', icon: 'sun' },
-                { id: 'dark', label: 'Dark', icon: 'moon' },
-                { id: 'system', label: 'System', icon: 'monitor' },
-              ]}
+              options={config.settings.themeOptions}
             />
           </section>
           <section className="card">
@@ -347,7 +335,7 @@ export function Settings({
           body="Your replies, flags, uploads and messages will be undone."
           ok="Reset"
           danger
-          onConfirm={() => { resetDemoData(); onToast('Demo data reset'); }}
+          onConfirm={() => { resetDemo.mutate(); onToast('Demo data reset'); }}
           onClose={() => setConfirmReset(false)}
         />
       ) : null}

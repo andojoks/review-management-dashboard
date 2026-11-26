@@ -2,11 +2,11 @@ import {
   useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent,
 } from 'react';
 import gsap from 'gsap';
-import { restoreThreads, updateThreads, useInbox, type Thread } from '@/data/inboxStore';
-import { useReviews } from '@/data/reviewStore';
-import { sourceSnapshot } from '@/data/source';
-import { useSettings } from '@/data/settingsStore';
-import { sourceNow } from '@/ui/data/clock';
+import {
+  useBootstrap, useConfig, usePatchThread, useRestoreState,
+  useReviews, useSendMessage, useSettings, useThreads,
+} from '@/stores';
+import type { Thread } from '@/types';
 import {
   formatMessageTime, formatRelative, initials, shortName,
 } from '@/ui/data/format';
@@ -19,12 +19,6 @@ import {
   chipShake, query as domQuery, reducedMotion, reveal, rise, useFlip, usePageMotion,
 } from '@/ui/motion/interactions';
 
-const replies = [
-  'Thanks, that’s really helpful.',
-  'Perfect — I’ll keep an eye out for it.',
-  'Brilliant, thank you for sorting it so quickly.',
-  'Okay, will do. Speak soon.',
-];
 let replyIndex = 0;
 
 const lastText = (thread: Thread) => thread.msgs[thread.msgs.length - 1]?.text ?? '';
@@ -53,8 +47,12 @@ function Conversation({ thread, people, onToast }: {
   const who = people.get(thread.who);
   const reviews = useReviews();
   const settings = useSettings();
+  const config = useConfig();
+  const sendMessage = useSendMessage();
+  const patchThread = usePatchThread();
+  const restoreState = useRestoreState();
   const review = thread.review ? reviews.find((item) => item.id === thread.review) : undefined;
-  const folder = review?.status === 'new' ? 'inbox' : review?.status === 'replied' ? 'published' : 'flagged';
+  const folder = config.clients.reviewFolders[review?.status ?? 'flagged'] ?? 'flagged';
 
   usePageMotion(root, (page) => {
     rise(domQuery(page, '.msg'), { y: 10, stagger: .04, delay: .1 });
@@ -83,22 +81,14 @@ function Conversation({ thread, people, onToast }: {
       chipShake(inputRef.current);
       return;
     }
-    updateThreads((draftThreads) => {
-      const target = draftThreads.find((item) => item.id === thread.id);
-      if (target) {
-        target.msgs.push({ from: 'me', text, t: sourceNow(), by: settings.me.id });
-        target.unread = 0;
-      }
-    });
+    sendMessage.mutate({ id: thread.id, input: { text, by: settings.me.id } });
     setDraft('');
-    timers.current.push(window.setTimeout(() => setTyping(true), 900));
+    timers.current.push(window.setTimeout(() => setTyping(true), config.inbox.typingDelay));
     timers.current.push(window.setTimeout(() => {
       setTyping(false);
-      updateThreads((draftThreads) => {
-        const target = draftThreads.find((item) => item.id === thread.id);
-        target?.msgs.push({ from: 'them', text: replies[replyIndex++ % replies.length], t: sourceNow() });
-      });
-    }, 2700));
+      const text = config.inbox.replies[replyIndex++ % config.inbox.replies.length];
+      sendMessage.mutate({ id: thread.id, input: { text, from: 'them' } });
+    }, config.inbox.replyDelay));
   };
 
   return (
@@ -123,11 +113,11 @@ function Conversation({ thread, people, onToast }: {
           aria-label="Archive"
           data-tip="Archive"
           onClick={() => {
-            const before = updateThreads((items) => {
-              const target = items.find((item) => item.id === thread.id);
-              if (target) target.archived = true;
+            patchThread.mutate({ id: thread.id, patch: { archived: true } }, {
+              onSuccess: (result) => onToast('Conversation archived', {
+                undo: () => restoreState.mutate(result.before),
+              }),
             });
-            onToast('Conversation archived', { undo: () => restoreThreads(before) });
             go('inbox');
           }}
         >
@@ -185,8 +175,10 @@ export function Inbox({
 }) {
   const root = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
-  const threads = useInbox();
-  const settings = useSettings();
+  const threads = useThreads();
+  const state = useBootstrap();
+  const config = useConfig();
+  const patchThread = usePatchThread();
   const [kind, setKind] = useState('all');
   const [query, setQuery] = useState('');
 
@@ -199,11 +191,11 @@ export function Inbox({
   }, []);
 
   const people = useMemo(() => new Map<string, Person>([
-    ...sourceSnapshot.clients.map((client) => [client.id, client] as const),
-    ...sourceSnapshot.pros.map((pro) => [pro.id, pro] as const),
-    ...settings.team.map((member) => [member.id, member] as const),
-    [settings.me.id, settings.me] as const,
-  ]), [settings]);
+    ...state.clients.map((client) => [client.id, client] as const),
+    ...state.pros.map((pro) => [pro.id, pro] as const),
+    ...state.team.map((member) => [member.id, member] as const),
+    [state.me.id, state.me] as const,
+  ]), [state.clients, state.pros, state.team, state.me]);
 
   const visible = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -219,11 +211,8 @@ export function Inbox({
 
   useEffect(() => {
     if (!active?.unread) return;
-    updateThreads((items) => {
-      const target = items.find((item) => item.id === active.id);
-      if (target) target.unread = 0;
-    });
-  }, [active?.id, active?.unread]);
+    patchThread.mutate({ id: active.id, patch: { read: true } });
+  }, [active?.id, active?.unread, patchThread]);
 
   return (
     <div className={`page ib${detailId ? ' has-sel' : ''}`} ref={root}>
@@ -245,7 +234,7 @@ export function Inbox({
               label="Show"
               value={kind}
               onChange={(value) => change(() => setKind(value))}
-              options={[{ id: 'all', label: 'All' }, { id: 'client', label: 'Clients' }, { id: 'pro', label: 'Pros' }]}
+              options={config.inbox.kindFilters}
             />
           </div>
           <ul className="ib__threads" ref={listRef}>

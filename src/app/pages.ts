@@ -1,18 +1,8 @@
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
 import type { RouteKey } from '@/router';
-import type { ToastOptions } from '@/ui/components/feedback';
-import type { OpenModal } from '@/ui/data/modals';
-import type { ThemeChoice } from '@/ui/data/notices';
+import type { PageProps } from '@/types';
 
-export type PageProps = {
-  onToast: (message: string, options?: ToastOptions) => void;
-  openModal?: OpenModal;
-  sub?: string;
-  detailId?: string;
-  dark: boolean;
-  onTheme: (anchor?: HTMLElement | null) => void;
-  setThemeChoice?: (theme: ThemeChoice) => void;
-};
+export type { PageProps } from '@/types';
 
 function routePage(id: RouteKey, load: () => Promise<Record<string, ComponentType<PageProps>>>) {
   return lazy(() => load().then((module) => ({

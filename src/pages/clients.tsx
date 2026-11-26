@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { useReviews, type Review } from '@/data/reviewStore';
-import { sourceSnapshot } from '@/data/source';
+import { useBootstrap, useClients, useConfig, useReviews } from '@/stores';
 import { go } from '@/router';
 import {
   formatDate, formatMoney, formatNumber, formatRelative, initials, plural,
@@ -11,17 +10,13 @@ import {
 } from '@/ui/components';
 import { query, reveal, rise, usePageMotion } from '@/ui/motion/interactions';
 
-const statusTone = { active: 'good', new: 'info', quiet: 'plain' } as const;
 const percent = (value: number) => `${Math.round(value * 100)}%`;
-const clientById = new Map(sourceSnapshot.clients.map((client) => [client.id, client]));
-const proById = new Map(sourceSnapshot.pros.map((pro) => [pro.id, pro]));
-
-const reviewFolder = (review: Review) =>
-  review.status === 'new' ? 'inbox' : review.status === 'replied' ? 'published' : 'flagged';
 
 function ClientDetail({ id }: { id: string }) {
   const reviews = useReviews();
-  const client = clientById.get(id);
+  const state = useBootstrap();
+  const config = useConfig();
+  const client = state.clients.find((item) => item.id === id);
   if (!client) return null;
   const list = reviews.filter((review) => review.client === id).sort((a, b) => b.t - a.t);
 
@@ -38,12 +33,12 @@ function ClientDetail({ id }: { id: string }) {
       {list.map((review) => (
         <a
           className="prof__rev"
-          href={`#/reviews/${reviewFolder(review)}/${review.id}`}
+          href={`#/reviews/${config.clients.reviewFolders[review.status] ?? 'flagged'}/${review.id}`}
           key={review.id}
         >
           <span className="prof__revtop">
             <Stars value={review.stars} size={12} />
-            <small>{proById.get(review.pro)?.name ?? 'Pro'} · {formatRelative(review.t)}</small>
+            <small>{state.pros.find((item) => item.id === review.pro)?.name ?? 'Pro'} · {formatRelative(review.t)}</small>
           </span>
           <b>{review.title}</b>
           <span>{review.text}</span>
@@ -65,6 +60,9 @@ export function Clients({
 }) {
   const root = useRef<HTMLDivElement>(null);
   const reviews = useReviews();
+  const { clients } = useClients();
+  const config = useConfig();
+  const statusTone = config.palette.statusTone;
   const [queryText, setQueryText] = useState('');
   const [status, setStatus] = useState('all');
   const [sort, setSort] = useState<{ key: string; direction: number }>({ key: 'spend', direction: -1 });
@@ -78,7 +76,7 @@ export function Clients({
 
   const rows = useMemo(() => {
     const term = queryText.trim().toLowerCase();
-    return sourceSnapshot.clients
+    return clients
       .filter((client) => (status === 'all' || client.status === status))
       .filter((client) => !term || [client.name, client.city, client.email].some((value) => value.toLowerCase().includes(term)))
       .map((client) => ({ client, reviews: reviewsFor(client.id) }))
@@ -95,10 +93,10 @@ export function Clients({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryText, status, sort, reviews]);
 
-  const selected = detailId ? clientById.get(detailId) : undefined;
-  const totalSpend = sourceSnapshot.clients.reduce((sum, client) => sum + client.spend, 0);
-  const withReview = sourceSnapshot.clients.filter((client) => reviewsFor(client.id).length).length;
-  const statusCount = (value: string) => sourceSnapshot.clients.filter((client) => client.status === value).length;
+  const selected = detailId ? clients.find((client) => client.id === detailId) : undefined;
+  const totalSpend = clients.reduce((sum, client) => sum + client.spend, 0);
+  const withReview = clients.filter((client) => reviewsFor(client.id).length).length;
+  const statusCount = (value: string) => clients.filter((client) => client.status === value).length;
 
   const onSort = (key: string) => setSort((current) => ({
     key,
@@ -112,7 +110,7 @@ export function Clients({
         description="Households who book through Handwell and the reviews they leave."
         actions={
           <>
-            <Button icon="download" onClick={() => onToast('clients.csv downloaded')}>Export</Button>
+            <Button icon="download" onClick={() => onToast(config.clients.exportMessage)}>Export</Button>
             <Button
               variant="primary"
               className="magnetic"
@@ -126,7 +124,7 @@ export function Clients({
       <div className="kpis cl__kpis">
         <div className="kpi">
           <span className="kpi__label">Clients</span>
-          <span className="kpi__value"><Counter value={sourceSnapshot.clients.length} format={formatNumber} /></span>
+          <span className="kpi__value"><Counter value={clients.length} format={formatNumber} /></span>
           <span className="kpi__foot">{statusCount('new')} joined this month</span>
         </div>
         <div className="kpi">
@@ -136,7 +134,7 @@ export function Clients({
         </div>
         <div className="kpi">
           <span className="kpi__label">Leave a review</span>
-          <span className="kpi__value"><Counter value={withReview / sourceSnapshot.clients.length} format={percent} /></span>
+          <span className="kpi__value"><Counter value={withReview / clients.length} format={percent} /></span>
           <span className="kpi__foot">at least once</span>
         </div>
         <div className="kpi">
@@ -150,10 +148,10 @@ export function Clients({
         <div className="toolbar cl__tools">
           <SearchField value={queryText} onChange={setQueryText} placeholder="Search name, town or email" />
           <div className="chips" role="group" aria-label="Status">
-            {['all', 'active', 'new', 'quiet'].map((value) => (
-              <Chip key={value} active={status === value} onClick={() => setStatus(value)}>
-                {value === 'all' ? 'All' : value[0].toUpperCase() + value.slice(1)}
-                <span className="badge">{value === 'all' ? sourceSnapshot.clients.length : statusCount(value)}</span>
+            {config.clients.statusFilters.map((option) => (
+              <Chip key={option.id} active={status === option.id} onClick={() => setStatus(option.id)}>
+                {option.label}
+                <span className="badge">{option.id === 'all' ? clients.length : statusCount(option.id)}</span>
               </Chip>
             ))}
           </div>

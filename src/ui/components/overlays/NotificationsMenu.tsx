@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { noticeTime } from '@/ui/data/clock';
-import type { Notice } from '@/ui/data/notices';
+import type { Notice } from '@/types';
 import { Icon } from '@/ui/components/primitives';
 import { Popover } from './Popover';
 

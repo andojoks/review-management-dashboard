@@ -11,4 +11,4 @@ export { Overlay, type OverlayProps } from './Overlay';
 export { Popover, type PopoverProps } from './Popover';
 export { ShortcutModal } from './ShortcutModal';
 export { SignIn, type SignInProps } from './SignIn';
-export type { Notice, OverlayKind, ThemeChoice } from '@/ui/data/notices';
+export type { Notice, OverlayKind, ThemeChoice } from '@/types';

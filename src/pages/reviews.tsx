@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from 'react';
 import gsap from 'gsap';
-import { replaceReview, updateReview, useReviews, type Review } from '@/data/reviewStore';
-import { sourceSnapshot } from '@/data/source';
-import { sourceNow } from '@/ui/data/clock';
+import {
+  useBootstrap, useConfig, useRestoreState, useReviews, useUpdateReview,
+} from '@/stores';
+import type { AppConfig, AppState, Review, ReviewPatch } from '@/types';
 import { formatDate, formatRelative, formatTime, initials, shortName } from '@/ui/data/format';
 import { go } from '@/router';
 import type { ToastOptions } from '@/ui/components/feedback';
@@ -16,41 +17,21 @@ import {
 
 type Toast = (message: string, options?: ToastOptions) => void;
 
-const prosById = new Map(sourceSnapshot.pros.map((pro) => [pro.id, pro]));
-const clientsById = new Map(sourceSnapshot.clients.map((client) => [client.id, client]));
-const teamById = new Map(sourceSnapshot.team.map((member) => [member.id, member]));
-const channels: Record<string, { icon: 'phone' | 'globe' | 'mail' | 'chat'; label: string }> = {
-  app: { icon: 'phone', label: 'Mobile app' },
-  web: { icon: 'globe', label: 'Website' },
-  email: { icon: 'mail', label: 'Email request' },
-  sms: { icon: 'chat', label: 'Text link' },
-};
-const tradeLabels: Record<string, string> = {
-  electric: 'Electrician', carpentry: 'Carpenter', plumbing: 'Plumber', painting: 'Painter',
-  tiling: 'Tiler', roofing: 'Roofer', garden: 'Gardener', locks: 'Locksmith',
-};
-const flagReasons = ['Personal details', 'Off-topic', 'Abusive language', 'Possible fake', 'Dispute open'];
+const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
-function replyTemplates(review: Review) {
-  const client = shortName(clientsById.get(review.client)?.name ?? 'there');
-  const pro = shortName(prosById.get(review.pro)?.name ?? 'the pro');
+function replyTemplates(
+  review: Review,
+  state: AppState,
+  templates: AppConfig['reviews']['templates'],
+) {
+  const client = shortName(state.clients.find((item) => item.id === review.client)?.name ?? 'there');
+  const pro = shortName(state.pros.find((item) => item.id === review.pro)?.name ?? 'the pro');
   const job = review.job.toLowerCase();
-  if (review.stars >= 4) {
-    return [
-      `Thank you, ${client}! We’ve passed this to ${pro}, who was really pleased to read it.`,
-      `So glad the ${job} went well, ${client}. Reviews like this help neighbours find good trades.`,
-    ];
-  }
-  if (review.stars === 3) {
-    return [
-      `Thanks for the honest review, ${client}. We’ve shared your point with ${pro} so the next visit runs smoother.`,
-      `Thank you, ${client}. If anything is still not right with the ${job}, reply here and we’ll sort it.`,
-    ];
-  }
-  return [
-    `We’re sorry, ${client} — this isn’t the standard we expect. Our disputes team will call you today to put it right.`,
-    `Thank you for telling us, ${client}. We’ve paused new bookings for ${pro} while we look into the ${job}.`,
-  ];
+  const group = review.stars >= 4 ? templates.positive : review.stars === 3 ? templates.mixed : templates.negative;
+  return group.map((template) => template
+    .replace('{client}', client)
+    .replace('{pro}', pro)
+    .replace('{job}', job));
 }
 
 const visibleReviews = (reviews: Review[], sub: string) => reviews.filter((review) => {
@@ -69,11 +50,13 @@ interface DetailProps {
   reviews: Review[];
   sub: string;
   next?: Review;
+  state: AppState;
+  config: AppConfig;
   mutate: (id: string, update: (review: Review) => void, message: string, options?: ToastOptions) => void;
   onHelpful: (id: string, button: HTMLElement | null) => void;
 }
 
-function ReviewDetail({ review, reviews, sub, next, mutate, onHelpful }: DetailProps) {
+function ReviewDetail({ review, reviews, sub, next, state, config, mutate, onHelpful }: DetailProps) {
   const root = useRef<HTMLDivElement>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
   const answer = useRef<HTMLDivElement>(null);
@@ -83,9 +66,11 @@ function ReviewDetail({ review, reviews, sub, next, mutate, onHelpful }: DetailP
   const [flagAnchor, setFlagAnchor] = useState<HTMLElement | null>(null);
   const [confirming, setConfirming] = useState(false);
 
-  const client = clientsById.get(review.client);
-  const pro = prosById.get(review.pro);
-  const channel = channels[review.channel] ?? { icon: 'chat' as const, label: review.channel };
+  const client = state.clients.find((item) => item.id === review.client);
+  const pro = state.pros.find((item) => item.id === review.pro);
+  const channel = config.reviews.channels[review.channel] ?? { icon: 'chat' as const, label: review.channel };
+  const tradeLabels = config.pros.tradeLabels;
+  const flagReasons = config.reviews.flagReasons;
 
   usePageMotion(root, (page) => {
     rise(domQuery(page, '.rvd__in > *'), { y: 14, stagger: .05 });
@@ -123,9 +108,9 @@ function ReviewDetail({ review, reviews, sub, next, mutate, onHelpful }: DetailP
       textarea.current?.focus();
       return;
     }
-    const signed = sign ? `${text}\n${sourceSnapshot.prefs.signature}` : text;
+    const signed = sign ? `${text}\n${state.prefs.signature}` : text;
     mutate(review.id, (item) => {
-      item.reply = { by: sourceSnapshot.me.id, text: signed, t: sourceNow() };
+      item.reply = { by: state.me.id, text: signed, t: 0 };
       item.status = 'replied';
     }, `Reply posted on ${review.id}`);
   };
@@ -231,14 +216,14 @@ function ReviewDetail({ review, reviews, sub, next, mutate, onHelpful }: DetailP
         <div className="rvd__answer" ref={answer}>
           <span className="disc disc--sm"><Icon name="reply" /></span>
           <div>
-            <small>{shortName(teamById.get(review.reply.by)?.name ?? 'Team')} answered · {formatRelative(review.reply.t)}</small>
+            <small>{shortName(state.team.find((item) => item.id === review.reply?.by)?.name ?? 'Team')} answered · {formatRelative(review.reply.t)}</small>
             <p>{review.reply.text}</p>
           </div>
         </div>
       ) : review.status === 'new' ? (
         <form className="rvd__compose" onSubmit={postReply}>
           <div className="rvd__tpls" role="group" aria-label="Suggested replies">
-            {replyTemplates(review).map((template) => (
+            {replyTemplates(review, state, config.reviews.templates).map((template) => (
               <button type="button" className="rvd__tpl" key={template} onClick={(event) => applyTemplate(template, event)}>
                 <Icon name="sparkle" size="sm" /><span>{template}</span>
               </button>
@@ -313,6 +298,10 @@ export function Reviews({ onToast, sub = 'inbox', detailId }: { onToast: Toast; 
   const root = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const reviews = useReviews();
+  const state = useBootstrap();
+  const config = useConfig();
+  const updateReview = useUpdateReview();
+  const restoreState = useRestoreState();
   const [query, setQuery] = useState('');
   const [stars, setStars] = useState(0);
   const [sort, setSort] = useState(sub === 'inbox' ? 'old' : 'new');
@@ -339,10 +328,13 @@ export function Reviews({ onToast, sub = 'inbox', detailId }: { onToast: Toast; 
     const term = query.trim().toLowerCase();
     return visibleReviews(reviews, sub)
       .filter((review) => (!stars || review.stars === stars))
-      .filter((review) => !term || [review.title, review.text, review.id, review.job, prosById.get(review.pro)?.name, clientsById.get(review.client)?.name]
-        .some((value) => value?.toLowerCase().includes(term)))
+      .filter((review) => !term || [
+        review.title, review.text, review.id, review.job,
+        state.pros.find((item) => item.id === review.pro)?.name,
+        state.clients.find((item) => item.id === review.client)?.name,
+      ].some((value) => value?.toLowerCase().includes(term)))
       .sort((a, b) => (sort === 'new' ? b.t - a.t : sort === 'old' ? a.t - b.t : a.stars - b.stars || b.t - a.t));
-  }, [reviews, query, stars, sort, sub]);
+  }, [reviews, state.pros, state.clients, query, stars, sort, sub]);
 
   const selected = reviews.find((review) => review.id === selectedId)
     ?? (detailId ? reviews.find((review) => review.id === detailId) : undefined)
@@ -361,14 +353,24 @@ export function Reviews({ onToast, sub = 'inbox', detailId }: { onToast: Toast; 
     options: ToastOptions = {},
   ) => {
     capture();
-    const before = updateReview(id, update);
+    const before = clone(state);
+    const draft = clone(reviews.find((review) => review.id === id) ?? reviews[0]);
+    update(draft);
+    const patch: ReviewPatch = {
+      title: draft.title,
+      text: draft.text,
+      status: draft.status,
+      flag: draft.flag ?? null,
+      reply: draft.reply ? { text: draft.reply.text, by: draft.reply.by } : undefined,
+    };
+    updateReview.mutate({ id, patch });
     if (!selectedId && list[0]) setSelectedId(list[0].id);
-    onToast(message, { ...options, undo: options.undo ?? (() => replaceReview(before)) });
+    onToast(message, { ...options, undo: options.undo ?? (() => restoreState.mutate(before)) });
   };
 
   const onHelpful = (id: string, button: HTMLElement | null) => {
     iconPop(button);
-    updateReview(id, (review) => { review.helpful += 1; });
+    updateReview.mutate({ id, patch: { helpful: 1 } });
   };
 
   const clearFilters = () => {
@@ -397,7 +399,7 @@ export function Reviews({ onToast, sub = 'inbox', detailId }: { onToast: Toast; 
             <SearchField value={query} onChange={setQuery} placeholder="Search text, pro, client…" />
             <div className="rvl__row2">
               <div className="chips" role="group" aria-label="Stars">
-                {[0, 5, 4, 3, 2, 1].map((value) => (
+                {config.reviews.starFilters.map((value) => (
                   <Chip
                     key={value}
                     active={stars === value}
@@ -414,17 +416,13 @@ export function Reviews({ onToast, sub = 'inbox', detailId }: { onToast: Toast; 
                 label="Sort"
                 value={sort}
                 onChange={setSort}
-                options={[
-                  { id: 'old', label: 'Oldest', title: 'Oldest first' },
-                  { id: 'new', label: 'Newest', title: 'Newest first' },
-                  { id: 'low', label: 'Lowest', title: 'Lowest rating first' },
-                ]}
+                options={config.reviews.sortOptions}
               />
             </div>
           </div>
           <ul className="rvl__list" ref={listRef}>
             {list.map((review) => {
-              const client = clientsById.get(review.client);
+              const client = state.clients.find((item) => item.id === review.client);
               return (
                 <li className={`rvl__row${review.id === selected?.id ? ' is-on' : ''}${review.status === 'new' ? ' is-new' : ''}`} data-flip-id={review.id} key={review.id}>
                   <a
@@ -432,7 +430,7 @@ export function Reviews({ onToast, sub = 'inbox', detailId }: { onToast: Toast; 
                     aria-current={review.id === selected?.id ? 'true' : undefined}
                   >
                     <span className="rvl__top"><Avatar initials={initials(client?.name ?? 'Client')} size="sm" /><b>{client?.name}</b><time>{formatRelative(review.t)}</time></span>
-                    <span className="rvl__meta"><Stars value={review.stars} size={12} /><small>for {prosById.get(review.pro)?.name}</small></span>
+                    <span className="rvl__meta"><Stars value={review.stars} size={12} /><small>for {state.pros.find((item) => item.id === review.pro)?.name}</small></span>
                     <span className="rvl__title">{review.title}</span>
                     <span className="rvl__text">{review.text}</span>
                     {review.flag ? <span className="rvl__flag"><Icon name="flag" size="sm" /> {review.status === 'hidden' ? 'Removed' : review.flag}</span> : null}
@@ -468,6 +466,8 @@ export function Reviews({ onToast, sub = 'inbox', detailId }: { onToast: Toast; 
               reviews={reviews}
               sub={sub}
               next={next}
+              state={state}
+              config={config}
               mutate={mutate}
               onHelpful={onHelpful}
             />

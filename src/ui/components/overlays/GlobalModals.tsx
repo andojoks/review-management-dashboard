@@ -1,16 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import {
-  addPro, useProsState,
-} from '@/data/prosStore';
-import { sourceSnapshot } from '@/data/source';
-import { updateDocs } from '@/data/docsStore';
-import { updateThreads } from '@/data/inboxStore';
-import { getSettings, updateSettings } from '@/data/settingsStore';
-import type { Notice } from '@/ui/data/notices';
-import type { ModalRequest } from '@/ui/data/modals';
+  useAddTeamMember, useAddThread, useBootstrap, useConfig,
+  useInvitePro, useUploadDoc,
+} from '@/stores';
+import type { ModalRequest, Notice } from '@/types';
 import { sourceNow } from '@/ui/data/clock';
 import { shortName } from '@/ui/data/format';
-import { trades } from '@/ui/data/trades';
 import { chipShake } from '@/ui/motion/interactions';
 import { Segmented } from '@/ui/components/primitives';
 import { Modal } from './Modal';
@@ -22,34 +17,26 @@ export interface GlobalModalsProps {
   onNotice: (notice: Notice) => void;
 }
 
-const folders = [
-  { id: 'policies', label: 'Policies' },
-  { id: 'reports', label: 'Reports' },
-  { id: 'contracts', label: 'Contracts' },
-  { id: 'templates', label: 'Templates' },
-];
-
 function ReviewRequest({ clientId, close, onToast, onNotice }: {
   clientId?: string;
   close: () => void;
   onToast: (message: string) => void;
   onNotice: (notice: Notice) => void;
 }) {
-  const { pros } = useProsState();
-  const [client, setClient] = useState(clientId ?? sourceSnapshot.clients[0].id);
-  const [pro, setPro] = useState(pros.find((item) => item.status === 'live')?.id ?? pros[0].id);
+  const state = useBootstrap();
+  const config = useConfig();
+  const [client, setClient] = useState(clientId ?? state.clients[0].id);
+  const [pro, setPro] = useState(state.pros.find((item) => item.status === 'live')?.id ?? state.pros[0].id);
   const [method, setMethod] = useState('email');
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    const chosen = sourceSnapshot.clients.find((item) => item.id === client)!;
-    const chosenPro = pros.find((item) => item.id === pro);
+    const chosen = state.clients.find((item) => item.id === client)!;
+    const chosenPro = state.pros.find((item) => item.id === pro);
     onToast(`Review request sent to ${chosen.name} by ${method === 'email' ? 'email' : 'text'}`);
     onNotice({
       id: `review-${Date.now()}`,
-      icon: 'send',
-      tone: 'info',
-      title: 'Review request sent',
+      ...config.modals.reviewNotice,
       body: `${chosen.name} was asked to review ${chosenPro?.name ?? 'a pro'}.`,
       at: sourceNow(),
       read: false,
@@ -70,7 +57,7 @@ function ReviewRequest({ clientId, close, onToast, onNotice }: {
             <label className="field">
               <span>Client</span>
               <select className="select" value={client} onChange={(event) => setClient(event.target.value)}>
-                {sourceSnapshot.clients.map((item) => (
+                {state.clients.map((item) => (
                   <option value={item.id} key={item.id}>{item.name}</option>
                 ))}
               </select>
@@ -78,8 +65,8 @@ function ReviewRequest({ clientId, close, onToast, onNotice }: {
             <label className="field">
               <span>For the pro</span>
               <select className="select" value={pro} onChange={(event) => setPro(event.target.value)}>
-                {pros.filter((item) => item.status === 'live').map((item) => (
-                  <option value={item.id} key={item.id}>{item.name} · {trades[item.trade]?.label ?? item.trade}</option>
+                {state.pros.filter((item) => item.status === 'live').map((item) => (
+                  <option value={item.id} key={item.id}>{item.name} · {config.pros.tradeLabels[item.trade] ?? item.trade}</option>
                 ))}
               </select>
             </label>
@@ -89,17 +76,14 @@ function ReviewRequest({ clientId, close, onToast, onNotice }: {
                 label="Send by"
                 value={method}
                 onChange={setMethod}
-                options={[
-                  { id: 'email', label: 'Email', icon: 'mail' },
-                  { id: 'sms', label: 'Text message', icon: 'chat' },
-                ]}
+                options={config.modals.reviewMethods}
               />
             </div>
             <div className="preview span2">
               <small className="muted">Preview</small>
               <p>
-                Hi {shortName(sourceSnapshot.clients.find((item) => item.id === client)?.name ?? '')}, how did{' '}
-                {shortName(pros.find((item) => item.id === pro)?.name ?? '')} do? Leave a quick review — it takes a minute and helps your neighbours.
+                Hi {shortName(state.clients.find((item) => item.id === client)?.name ?? '')}, how did{' '}
+                {shortName(state.pros.find((item) => item.id === pro)?.name ?? '')} do? Leave a quick review — it takes a minute and helps your neighbours.
               </p>
             </div>
           </div>
@@ -114,8 +98,11 @@ function ReviewRequest({ clientId, close, onToast, onNotice }: {
 }
 
 function UploadDocument({ close, onToast }: { close: () => void; onToast: (message: string) => void }) {
+  const state = useBootstrap();
+  const config = useConfig();
+  const uploadDoc = useUploadDoc();
   const [name, setName] = useState('');
-  const [folder, setFolder] = useState('reports');
+  const [folder, setFolder] = useState(config.modals.defaultUploadFolder);
   const [error, setError] = useState('');
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -125,18 +112,13 @@ function UploadDocument({ close, onToast }: { close: () => void; onToast: (messa
       chipShake(event.currentTarget.querySelector('.input'));
       return;
     }
-    const kind = folder === 'reports' ? 'sheet' : folder === 'templates' ? 'doc' : 'pdf';
-    updateDocs((draft) => {
-      draft.docs.unshift({
-        id: `d${Date.now()}`,
-        name: name.trim(),
-        kind,
-        folder,
-        size: Math.round(80 + Math.random() * 600),
-        updated: sourceNow(),
-        owner: getSettings().me.id,
-        starred: false,
-      });
+    const kind = config.modals.documentKindsByFolder[folder] ?? 'pdf';
+    uploadDoc.mutate({
+      name: name.trim(),
+      kind,
+      folder,
+      size: Math.round(80 + Math.random() * 600),
+      owner: state.me.id,
     });
     onToast(`“${name.trim()}” uploaded to ${folder}`);
     close();
@@ -160,7 +142,7 @@ function UploadDocument({ close, onToast }: { close: () => void; onToast: (messa
             </label>
             <div className="field span2">
               <span>Folder</span>
-              <Segmented label="Folder" value={folder} onChange={setFolder} options={folders} />
+              <Segmented label="Folder" value={folder} onChange={setFolder} options={config.modals.uploadFolders} />
             </div>
             <div className="dropzone span2">
               <b>Drop a file here</b>
@@ -178,9 +160,11 @@ function UploadDocument({ close, onToast }: { close: () => void; onToast: (messa
 }
 
 function InvitePro({ close, onToast }: { close: () => void; onToast: (message: string) => void }) {
+  const config = useConfig();
+  const invitePro = useInvitePro();
   const [name, setName] = useState('');
-  const [trade, setTrade] = useState('electric');
-  const [area, setArea] = useState('Leeds');
+  const [trade, setTrade] = useState(config.modals.defaultProTrade);
+  const [area, setArea] = useState(config.modals.defaultProCity);
   const [error, setError] = useState('');
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -190,34 +174,17 @@ function InvitePro({ close, onToast }: { close: () => void; onToast: (message: s
       chipShake(event.currentTarget.querySelector('.input'));
       return;
     }
-    const id = `p${Date.now()}`;
     const clean = name.trim();
-    addPro({
-      id,
+    invitePro.mutate({
       name: clean,
       trade,
       city: area,
-      hue: sourceSnapshot.pros.length % 6,
-      joined: sourceNow(),
-      jobs: 0,
-      status: 'onboarding',
-      step: 0,
-      responseRate: .9,
+      email: '—',
       phone: '—',
       bio: 'New to Handwell.',
-    });
-    updateDocs((draft) => {
-      ['Photo ID', 'Liability insurance', 'Trade licence', 'Background check'].forEach((kind) => {
-        draft.verifications.push({
-          id: `v${Date.now()}-${kind}`,
-          pro: id,
-          kind,
-          sent: sourceNow(),
-          expires: sourceNow() + 365 * 86_400_000,
-          status: 'pending',
-          file: `${clean.split(/\s+/)[1].toLowerCase()}-${kind.toLowerCase().replace(/ /g, '-')}.pdf`,
-        });
-      });
+      responseRate: .9,
+      expiresDays: 365,
+      filePrefix: clean.split(/\s+/)[1].toLowerCase(),
     });
     onToast(`${clean} invited — they start at “Applied”`);
     close();
@@ -242,13 +209,13 @@ function InvitePro({ close, onToast }: { close: () => void; onToast: (message: s
             <label className="field">
               <span>Trade</span>
               <select className="select" value={trade} onChange={(event) => setTrade(event.target.value)}>
-                {Object.entries(trades).map(([id, value]) => <option value={id} key={id}>{value.label}</option>)}
+                {Object.entries(config.pros.tradeLabels).map(([id, label]) => <option value={id} key={id}>{label}</option>)}
               </select>
             </label>
             <label className="field">
               <span>Area</span>
               <select className="select" value={area} onChange={(event) => setArea(event.target.value)}>
-                {['Leeds', 'York', 'Harrogate', 'Bradford', 'Wakefield', 'Halifax'].map((value) => (
+                {config.modals.inviteCities.map((value) => (
                   <option value={value} key={value}>{value}</option>
                 ))}
               </select>
@@ -265,6 +232,8 @@ function InvitePro({ close, onToast }: { close: () => void; onToast: (message: s
 }
 
 function InviteTeammate({ close, onToast }: { close: () => void; onToast: (message: string) => void }) {
+  const state = useBootstrap();
+  const addTeamMember = useAddTeamMember();
   const [email, setEmail] = useState('');
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -279,17 +248,15 @@ function InviteTeammate({ close, onToast }: { close: () => void; onToast: (messa
       .replace(/[._]/g, ' ')
       .replace(/\b\w/g, (letter) => letter.toUpperCase());
     const name = derived.includes(' ') ? derived : `${derived} Shaw`;
-    updateSettings((draft) => {
-      draft.team.push({
-        id: `m${draft.team.length}`,
-        name,
-        role: 'Review moderator',
-        hue: draft.team.length % 6,
-        email: address,
-        online: false,
-        replies: 0,
-        avgHours: 0,
-      });
+    addTeamMember.mutate({
+      id: `m${state.team.length}`,
+      name,
+      role: 'Review moderator',
+      hue: state.team.length % 6,
+      email: address,
+      online: false,
+      replies: 0,
+      avgHours: 0,
     });
     onToast(`Invite sent to ${address}`);
     close();
@@ -323,8 +290,9 @@ function InviteTeammate({ close, onToast }: { close: () => void; onToast: (messa
 }
 
 function NewMessage({ who, close, onToast }: { who?: string; close: () => void; onToast: (message: string) => void }) {
-  const { pros } = useProsState();
-  const [to, setTo] = useState(who ?? `c:${sourceSnapshot.clients[0].id}`);
+  const state = useBootstrap();
+  const addThread = useAddThread();
+  const [to, setTo] = useState(who ?? `c:${state.clients[0].id}`);
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -337,15 +305,13 @@ function NewMessage({ who, close, onToast }: { who?: string; close: () => void; 
     }
     const [kind, person] = to.split(':');
     const id = `t${Date.now()}`;
-    updateThreads((draft) => {
-      draft.unshift({
-        id,
-        who: person,
-        kind: kind === 'c' ? 'client' : 'pro',
-        subject: subject.trim(),
-        unread: 0,
-        msgs: [{ from: 'me', text: message.trim(), t: sourceNow(), by: getSettings().me.id }],
-      });
+    addThread.mutate({
+      id,
+      who: person,
+      kind: kind === 'c' ? 'client' : 'pro',
+      subject: subject.trim(),
+      unread: 0,
+      msgs: [{ from: 'me', text: message.trim(), t: sourceNow(), by: state.me.id }],
     });
     onToast('Message sent');
     close();
@@ -361,12 +327,12 @@ function NewMessage({ who, close, onToast }: { who?: string; close: () => void; 
               <span>To</span>
               <select className="select" value={to} onChange={(event) => setTo(event.target.value)}>
                 <optgroup label="Clients">
-                  {sourceSnapshot.clients.map((item) => (
+                  {state.clients.map((item) => (
                     <option value={`c:${item.id}`} key={item.id}>{item.name}</option>
                   ))}
                 </optgroup>
                 <optgroup label="Pros">
-                  {pros.map((item) => (
+                  {state.pros.map((item) => (
                     <option value={`p:${item.id}`} key={item.id}>{item.name}</option>
                   ))}
                 </optgroup>

@@ -1,6 +1,6 @@
 import { navGroups, routeMeta, subMap, type RouteKey } from '@/router';
 import { routeIcon } from '@/config/navigation';
-import type { Notice } from '@/ui/data/notices';
+import type { Notice } from '@/types';
 import { Icon, Switch } from '@/ui/components/primitives';
 
 export interface AllPagesProps {

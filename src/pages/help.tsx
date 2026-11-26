@@ -1,27 +1,19 @@
 import { useRef, useState, type FormEvent } from 'react';
+import { useHelpData } from '@/stores';
+import { clockBase } from '@/ui/data/clock';
 import { formatRelative } from '@/ui/data/format';
 import { Accordion, Card, CardHeader, Empty, Icon, PageHeader, Pill, SearchField } from '@/ui/components';
 import {
   chipShake, query as domQuery, reveal, rise, usePageMotion,
 } from '@/ui/motion/interactions';
 
-const baseTime = new Date(2026, 10, 9, 10, 24, 0).getTime();
-
-const answers: Array<[string, string]> = [
-  ['When should a review be flagged?', 'Hold a review when it shares personal details, is not about the job, uses abusive language, has no matching booking, or is about money still in dispute. Everything else stays public — even when it is harsh.'],
-  ['Can a client change their review?', 'Yes. Ask them to open the link in their booking email again; the new version replaces the old one and the history is kept for the team.'],
-  ['How fast should we reply?', 'Within the reply deadline in Settings › Review rules (24 hours by default). The queue sorts oldest first so nothing slips.'],
-  ['What makes a pro go live?', 'Four approved documents: photo ID, liability insurance, a trade licence and a background check. Approving the last one puts them live automatically.'],
-  ['Does removing a review change the rating?', 'Yes — a removed review stops counting toward the pro’s average straight away. Restoring it brings it back.'],
-  ['Can pros reply to reviews themselves?', 'Not yet. Pros message the desk from their app and we post the public reply, so every answer keeps the same tone.'],
-];
-
 export function Help({ onToast }: { onToast: (message: string) => void }) {
   const root = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const help = useHelpData();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState<number | null>(0);
-  const [tickets, setTickets] = useState([{ subject: 'Text-link reviews arrive without a job name', time: baseTime - 2 * 86400000 }]);
+  const [tickets, setTickets] = useState(help.tickets);
   const [subject, setSubject] = useState('');
   const [details, setDetails] = useState('');
 
@@ -30,9 +22,9 @@ export function Help({ onToast }: { onToast: (message: string) => void }) {
     rise(domQuery(page, '.faq__item'), { y: 10, delay: .2, stagger: .04 });
   }, []);
 
-  const filtered = answers
+  const filtered = help.faqs
     .map((entry, index) => ({ entry, index }))
-    .filter(({ entry }) => !query || `${entry[0]} ${entry[1]}`.toLowerCase().includes(query.toLowerCase()));
+    .filter(({ entry }) => !query || `${entry.question} ${entry.answer}`.toLowerCase().includes(query.toLowerCase()));
 
   const send = (event: FormEvent) => {
     event.preventDefault();
@@ -41,7 +33,7 @@ export function Help({ onToast }: { onToast: (message: string) => void }) {
       onToast('Add a subject and a few words');
       return;
     }
-    setTickets((current) => [{ subject: subject.trim(), time: baseTime }, ...current]);
+    setTickets((current) => [{ subject: subject.trim(), time: clockBase }, ...current]);
     setSubject('');
     setDetails('');
     onToast('Ticket sent — we answer within a working day');
@@ -59,8 +51,8 @@ export function Help({ onToast }: { onToast: (message: string) => void }) {
               active={open === null ? null : String(open)}
               items={filtered.map(({ entry, index }) => ({
                 id: String(index),
-                question: entry[0],
-                answer: <p>{entry[1]}</p>,
+                question: entry.question,
+                answer: <p>{entry.answer}</p>,
               }))}
               onChange={(id) => setOpen(id === null ? null : Number(id))}
             />
@@ -83,8 +75,8 @@ export function Help({ onToast }: { onToast: (message: string) => void }) {
             {tickets.map((ticket, index) => (
               <div className="row-set" key={`${ticket.subject}-${ticket.time}`}>
                 <span className="row-set__text"><b>{ticket.subject}</b><small>{formatRelative(ticket.time)}</small></span>
-                <Pill tone={index === 0 && ticket.time >= baseTime - 60000 ? 'info' : 'warn'}>
-                  {index === 0 && ticket.time >= baseTime - 60000 ? 'Sent' : 'Open'}
+                <Pill tone={index === 0 && ticket.time >= clockBase - 60000 ? 'info' : 'warn'}>
+                  {index === 0 && ticket.time >= clockBase - 60000 ? 'Sent' : 'Open'}
                 </Pill>
               </div>
             ))}

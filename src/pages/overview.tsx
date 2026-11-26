@@ -1,11 +1,8 @@
-import { useMemo, useRef, useState, type CSSProperties } from 'react';
-import { useProsState } from '@/data/prosStore';
-import { useReviews } from '@/data/reviewStore';
-import { useSettings } from '@/data/settingsStore';
-import { tradeLabels } from '@/store';
-import type { OpenModal } from '@/ui/data/modals';
+import { useRef, useState, type CSSProperties } from 'react';
+import { useConfig, useOverviewData } from '@/stores';
+import type { OpenModal } from '@/types';
 import { formatNumber, initials, shortName } from '@/ui/data/format';
-import { buildOverviewData, formatDuration } from '@/ui/data/overview';
+import { formatDuration } from '@/ui/data/overview';
 import {
   Avatar, Badge, BarChart, Button, Card, CardHeader, Counter, Delta, DetailCard,
   DetailListCard, Icon, MetricTile, PageHeader, Pill, Rating, ReputationChart,
@@ -25,16 +22,9 @@ const shortDate = (time: number) =>
 
 export function Overview({ openModal }: { openModal?: OpenModal }) {
   const root = useRef<HTMLDivElement>(null);
-  const reviews = useReviews();
-  const { pros, verifications } = useProsState();
-  const settings = useSettings();
-  const data = useMemo(() => buildOverviewData({
-    userName: settings.me.name,
-    reviews,
-    pros,
-    verifications,
-    team: settings.team,
-  }), [reviews, pros, verifications, settings.me.name, settings.team]);
+  const data = useOverviewData();
+  const config = useConfig();
+  const tradeLabels = config.pros.tradeLabels;
   const [selected, setSelected] = useState('reviews');
   const metric = data.metrics.find((item) => item.id === selected) ?? data.metrics[0];
 

@@ -1,10 +1,12 @@
 import { useMemo, useRef, useState } from 'react';
-import { advancePro, togglePro, useProsState, type Mutation, type Pro } from '@/data/prosStore';
-import { useReviews, type Review } from '@/data/reviewStore';
-import { sourceSnapshot } from '@/data/source';
+import {
+  useAdvancePro, useBootstrap, useConfig, useProsState, useRestoreState,
+  useReviews, useTogglePro,
+} from '@/stores';
+import type { Pro, Review } from '@/types';
 import { go } from '@/router';
 import type { ToastOptions } from '@/ui/components/feedback';
-import type { OpenModal } from '@/ui/data/modals';
+import type { OpenModal } from '@/types';
 import { formatDate, formatNumber, formatRelative, initials } from '@/ui/data/format';
 import { Drawer } from '@/ui/components/overlays';
 import {
@@ -12,30 +14,19 @@ import {
   Segmented, SelectField, Stars, Steps, Tabs,
 } from '@/ui/components';
 import { iconPop, query, reveal, useFlip, usePageMotion } from '@/ui/motion/interactions';
-import type { IconName } from '@/ui/components';
 
-const tradeLabels: Record<string, string> = {
-  electric: 'Electrician', carpentry: 'Carpenter', plumbing: 'Plumber', painting: 'Painter',
-  tiling: 'Tiler', roofing: 'Roofer', garden: 'Gardener', locks: 'Locksmith',
-};
-const tradeIcons: Record<string, IconName> = {
-  electric: 'bolt', carpentry: 'chair', plumbing: 'drop', painting: 'pen',
-  tiling: 'grid', roofing: 'home', garden: 'leaf', locks: 'key',
-};
-
-const progressSteps = ['Applied', 'ID checked', 'Insured', 'Licence', 'Live'];
-const laneSteps = progressSteps.slice(0, 4);
-const actionLabels = ['Check photo ID', 'Check insurance', 'Check licence', 'Run background check'];
 const twoDecimals = (value: number) => value.toFixed(2);
 
 const reviewSub = (status: string) => status === 'new' ? 'inbox' : status === 'replied' ? 'published' : 'flagged';
 
 function ProProfile({ pro, reviews }: { pro: Pro; reviews: Review[] }) {
+  const { clients } = useBootstrap();
+  const config = useConfig();
   const rated = reviews.filter((review) => review.pro === pro.id)
     .filter((review) => review.status !== 'hidden')
     .sort((a, b) => b.t - a.t);
   const value = rated.reduce((sum, review) => sum + review.stars, 0) / (rated.length || 1);
-  const mix = [5, 4, 3, 2, 1].map((stars) => rated.filter((review) => review.stars === stars).length);
+  const mix = config.pros.starMix.map((stars) => rated.filter((review) => review.stars === stars).length);
 
   return (
     <>
@@ -65,7 +56,7 @@ function ProProfile({ pro, reviews }: { pro: Pro; reviews: Review[] }) {
       <div className="section-label">Latest reviews</div>
       {rated.slice(0, 4).map((review) => (
         <a className="prof__rev" href={`#/reviews/${reviewSub(review.status)}/${review.id}`} key={review.id}>
-          <span className="prof__revtop"><Stars value={review.stars} size={12} /><small>{sourceSnapshot.clients.find((client) => client.id === review.client)?.name} · {formatRelative(review.t)}</small></span>
+          <span className="prof__revtop"><Stars value={review.stars} size={12} /><small>{clients.find((client) => client.id === review.client)?.name} · {formatRelative(review.t)}</small></span>
           <b>{review.title}</b>
           <span>{review.text}</span>
         </a>
@@ -81,6 +72,15 @@ export function Pros({ onToast, openModal, sub = 'directory', detailId }: { onTo
   const lanes = useRef<HTMLDivElement>(null);
   const { pros, verifications } = useProsState();
   const reviews = useReviews();
+  const config = useConfig();
+  const restoreState = useRestoreState();
+  const advancePro = useAdvancePro();
+  const togglePro = useTogglePro();
+  const tradeLabels = config.pros.tradeLabels;
+  const tradeIcons = config.pros.tradeIcons;
+  const progressSteps = config.pros.progressSteps;
+  const laneSteps = progressSteps.slice(0, 4);
+  const actionLabels = config.pros.actionLabels;
   const [search, setSearch] = useState('');
   const [trade, setTrade] = useState('all');
   const [status, setStatus] = useState('all');
@@ -107,20 +107,19 @@ export function Pros({ onToast, openModal, sub = 'directory', detailId }: { onTo
       .filter((pro) => !term || [pro.name, pro.city, tradeLabels[pro.trade]].some((value) => value.toLowerCase().includes(term)))
       .map((pro) => ({ pro, ...rated(pro.id) }))
       .sort((a, b) => b.value - a.value || b.count - a.count);
-  }, [pros, reviews, search, trade, status]);
+  }, [pros, reviews, search, trade, status, tradeLabels]);
 
   const onboarding = pros.filter((pro) => pro.status === 'onboarding');
   const selected = sub === 'directory' && detailId ? prosById.get(detailId) : undefined;
 
-  const notify = (mutation: Mutation | null) => {
-    if (!mutation) return;
-    onToast(mutation.message, { warn: mutation.warn, undo: mutation.undo });
+  const notify = (mutation: { message: string; warn?: boolean; before?: unknown }, undo?: () => void) => {
+    onToast(mutation.message, { warn: mutation.warn, undo });
   };
 
   const advance = (id: string, button: HTMLElement | null) => {
     iconPop(button);
     captureLanes();
-    notify(advancePro(id));
+    advancePro.mutate(id, { onSuccess: (result) => notify(result.data) });
   };
 
   const tabs = (
@@ -236,7 +235,9 @@ export function Pros({ onToast, openModal, sub = 'directory', detailId }: { onTo
                 <button
                   type="button"
                   className="btn"
-                  onClick={() => notify(togglePro(selected.id))}
+                  onClick={() => togglePro.mutate(selected.id, {
+                    onSuccess: (result) => notify(result.data, () => restoreState.mutate(result.before)),
+                  })}
                 >
                   <Icon name={selected.status === 'paused' ? 'play' : 'pause'} />
                   {selected.status === 'paused' ? 'Resume bookings' : 'Pause bookings'}

@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { useConfig } from '@/stores';
 
 export interface AvatarProps {
   initials: string;
@@ -9,8 +10,10 @@ export interface AvatarProps {
 }
 
 export function Avatar({ initials, staff = true, online = false, size, hue }: AvatarProps) {
+  const config = useConfig();
   const sizeClass = size ? ` av--${size}` : '';
-  const style = hue === undefined ? undefined : ({ '--h': `var(--h${hue % 6})` } as CSSProperties);
+  const palette = config.palette.avatarHueVars;
+  const style = hue === undefined ? undefined : ({ '--h': `var(${palette[hue % palette.length]})` } as CSSProperties);
   return (
     <span
       className={`av${staff ? ' av--staff' : ''}${sizeClass}`}

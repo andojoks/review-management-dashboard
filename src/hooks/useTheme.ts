@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { ThemeChoice } from '@/ui/data/notices';
+import type { ThemeChoice } from '@/types';
 import { recordMode, reducedMotion } from '@/ui/motion/interactions';
 
 export function initialTheme(): ThemeChoice {
